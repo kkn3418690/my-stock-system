@@ -539,9 +539,9 @@ function saveAll() {
             } else { cleanedDatabase[shop] = { invoice: "免開發票", barcode: "不需要條碼", billingDate: "25號結", suggestQty: {} }; }
         });
         shopDatabase = cleanedDatabase;
-        localStorage.setItem('erp_config_products_v7', productsTextarea.value);
-        localStorage.setItem('erp_config_shops_v7', shopsTextarea.value);
-        localStorage.setItem('erp_shop_database_v7', JSON.stringify(shopDatabase));
+        saveAll('erp_config_products_v7', productsTextarea.value);
+        saveAll('erp_config_shops_v7', shopsTextarea.value);
+        saveAll('erp_shop_database_v7', JSON.stringify(shopDatabase));
         buildShopSelect(); renderProductSelect();
         alert('💾 後台所有設定（合約下拉與四色）已安全同步存檔！');
         switchTab('work-tab', btnWorkTab);
@@ -601,15 +601,15 @@ function saveAll() {
         if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
         const recordId = Date.now() + Math.random().toString(36).substr(2, 5);
         records.push({ id: recordId, shop: shopName, name: productName, baseName: baseProdName, color: currentColor, qty: qty, isReturn: typeReturn, note: note });
-        localStorage.setItem('erp_records', JSON.stringify(records));
+        saveAll('erp_records', JSON.stringify(records));
         itemQty.value = 1; isReturn.checked = false; noteInput.value = ""; updateUI();
     });
     function changeItemQty(id, newQty) {
         const val = parseInt(newQty, 10); if (isNaN(val) || val < 0) return;
         const idx = records.findIndex(r => r.id === id);
-        if (idx !== -1) { records[idx].qty = val; localStorage.setItem('erp_records', JSON.stringify(records)); updateUI(); }
+        if (idx !== -1) { records[idx].qty = val; saveAll('erp_records', JSON.stringify(records)); updateUI(); }
     }
-    function deleteItem(id) { records = records.filter(r => r.id !== id); localStorage.setItem('erp_records', JSON.stringify(records)); updateUI(); }
+    function deleteItem(id) { records = records.filter(r => r.id !== id); saveAll('erp_records', JSON.stringify(records)); updateUI(); }
         document.getElementById('exportBtn').addEventListener('click', () => {
     if (records.length === 0) { alert('目前沒有任何備貨數據可以儲存喔！'); return; }
 
