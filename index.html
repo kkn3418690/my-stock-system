@@ -708,7 +708,15 @@ function loadSystem() {
         }
         historyList.innerHTML = historyHtml + '</div>';
     }
-    document.getElementById('clearBtn').addEventListener('click', () => { if (confirm('確定清空今日所有紀錄嗎？')) { records = []; localStorage.removeItem('erp_records'); updateUI(); } });
+    document.getElementById('clearBtn').addEventListener('click', () => { 
+    if (confirm('確定清空今日所有紀錄嗎？')) { 
+        records = []; 
+        saveAll(); // 呼叫 saveAll() 會將空的 records 傳送到雲端，同時更新本地
+        updateUI(); 
+        alert('紀錄已清空並同步至雲端');
+    } 
+});
+
     document.getElementById('copyBtn').addEventListener('click', () => {
         if (records.length === 0) return alert('沒有數據');
         const totalSummary = {}; records.forEach(r => { if(!r.isReturn) totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty; });
