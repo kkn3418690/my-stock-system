@@ -304,6 +304,35 @@
     let shopDatabase = {}; 
     let currentColor = '紫';
     let records = []; 
+    
+// 統一同步函式
+function saveAll() {
+    // 1. 同步到本地儲存 (保持原有的備份機制)
+    localStorage.setItem('erp_records', JSON.stringify(records));
+    localStorage.setItem('erp_config_products_v7', productsTextarea.value);
+    localStorage.setItem('erp_config_shops_v7', shopsTextarea.value);
+    localStorage.setItem('erp_shop_database_v7', JSON.stringify(shopDatabase));
+    
+    // 2. 推送到 Google 雲端
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSbgSxs77eqrTTJ_5TSRnDBPOi8HpssL0lZaKOIWPfXDZnMFns4_vFYuO2Rfr6f5wQ/exec";
+    
+    // 準備要傳送的完整資料包
+    const payload = {
+        records: records,
+        config: {
+            products: productsTextarea.value,
+            shops: shopsTextarea.value,
+            database: shopDatabase
+        }
+    };
+    
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload)
+    }).catch(err => console.error("雲端同步失敗", err));
+}
 
     const btnWorkTab = document.getElementById('btn-work-tab');
     const btnSettingTab = document.getElementById('btn-setting-tab');
@@ -380,24 +409,47 @@
     });
 
     function loadSystem() {
-        buildBillingDateOptions();
-        const savedRecords = localStorage.getItem('erp_records');
-        if (savedRecords) { records = JSON.parse(savedRecords); updateUI(); }
-        let configProds = localStorage.getItem('erp_config_products_v7');
-        if (!configProds) { configProds = defaultProducts.join('\n'); localStorage.setItem('erp_config_products_v7', configProds); }
-        productsTextarea.value = configProds;
-        baseProducts = configProds.split('\n').map(p => p.trim()).filter(p => p !== '');
-        let configShops = localStorage.getItem('erp_config_shops_v7');
-        if (!configShops) { configShops = defaultShops.join('\n'); localStorage.setItem('erp_config_shops_v7', configShops); }
-        shopsTextarea.value = configShops;
-        baseShops = configShops.split('\n').map(s => s.trim()).filter(s => s !== '');
-        const savedDb = localStorage.getItem('erp_shop_database_v7');
-        if (savedDb) { shopDatabase = JSON.parse(savedDb); } else {
-            baseShops.forEach(shop => { shopDatabase[shop] = { invoice: "免開發票", barcode: "不需要條碼", billingDate: "25號結", suggestQty: {} }; });
-        }
-        buildShopSelect();
-        renderProductSelect();
-    }
+    buildBillingDateOptions();
+    
+    // 雲端同步網址
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSbgSxs77eqrTTJ_5TSRnDBPOi8HpssL0lZaKOIWPfXDZnMFns4_vFYuO2Rfr6f5wQ/exec";
+    
+    fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+            // 成功從雲端取得資料
+            records = data.records;
+            shopDatabase = data.config.database;
+            productsTextarea.value = data.config.products;
+            shopsTextarea.value = data.config.shops;
+            
+            // 必須執行這些函式來渲染頁面
+            buildShopSelect();
+            renderProductSelect();
+            updateUI();
+        })
+        .catch(() => {
+            // 如果連不上雲端，才讀取本地 localStorage
+            console.log("無法連線至雲端，使用本地資料");
+            const savedRecords = localStorage.getItem('erp_records');
+            if (savedRecords) { records = JSON.parse(savedRecords); }
+            
+            // 讀取本地設定
+            const configProds = localStorage.getItem('erp_config_products_v7');
+            if (configProds) { productsTextarea.value = configProds; baseProducts = configProds.split('\n').map(p => p.trim()).filter(p => p !== ''); }
+            
+            const configShops = localStorage.getItem('erp_config_shops_v7');
+            if (configShops) { shopsTextarea.value = configShops; baseShops = configShops.split('\n').map(s => s.trim()).filter(s => s !== ''); }
+            
+            const savedDb = localStorage.getItem('erp_shop_database_v7');
+            if (savedDb) { shopDatabase = JSON.parse(savedDb); }
+            
+            buildShopSelect();
+            renderProductSelect();
+            updateUI();
+        });
+}
+
 
     function initAdminSelectors() { syncAdminShopOptions(); syncAdminProductOptions(); onAdminShopChange(); }
     function syncAdminShopOptions() {
