@@ -321,39 +321,38 @@
     let currentColor = '紫';
     let records = []; 
 
-    // 統一同步函式
-function saveAll() {
-    // 1. 同步到本地儲存
-    localStorage.setItem('erp_records', JSON.stringify(records));
-    localStorage.setItem('erp_config_products_v7', productsTextarea.value);
-    localStorage.setItem('erp_config_shops_v7', shopsTextarea.value);
-    localStorage.setItem('erp_shop_database_v7', JSON.stringify(shopDatabase));
-    
-    // 2. 推送到 Google 雲端
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
-    
-    const payload = {
-        records: records,
-        config: {
-            products: productsTextarea.value,
-            shops: shopsTextarea.value,
-            database: shopDatabase
-        }
-    };
-    
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify(payload)
-    })
-    .then(() => console.log("雲端同步成功"))
-    .catch(err => {
-        console.error("雲端同步失敗", err);
-        showSyncError(); // 呼叫錯誤提醒視窗
-    });
-}
-
+        // 統一同步函式
+    function saveAll() {
+        // 1. 同步到本地儲存
+        localStorage.setItem('erp_records', JSON.stringify(records));
+        localStorage.setItem('erp_config_products_v7', productsTextarea.value);
+        localStorage.setItem('erp_config_shops_v7', shopsTextarea.value);
+        localStorage.setItem('erp_shop_database_v7', JSON.stringify(shopDatabase));
+        
+        // 2. 推送到 Google 雲端
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
+        
+        const payload = {
+            records: records,
+            config: {
+                products: productsTextarea.value,
+                shops: shopsTextarea.value,
+                database: shopDatabase
+            }
+        };
+        
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { "Content-Type": "text/plain" },
+            body: JSON.stringify(payload)
+        })
+        .then(() => console.log("雲端同步成功"))
+        .catch(err => {
+            console.error("雲端同步失敗", err);
+            showSyncError(); // 當雲端失敗時，呼叫我們剛加入的錯誤提醒
+        });
+    }
     
     fetch(SCRIPT_URL, {
         method: 'POST',
