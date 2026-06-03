@@ -118,6 +118,11 @@
         .big-card-input:focus { background: #fffde7 !important; border-color: #007AFF !important; box-shadow: 0 0 8px rgba(0,122,255,0.3); }
         
         .tip-gray { text-align: center; color: #7f8c8d; font-size: 14px; padding: 20px 0; font-weight: bold; }
+        
+                /* 懸浮錯誤視窗 */
+        .toast-error { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #ff4d4f; color: white; padding: 15px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .toast-error button { background: white; color: #ff4d4f; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+
     </style>
 </head>
 <body>
@@ -284,6 +289,17 @@
 
 <script>
     // [此處 JS 代碼與原版一致，保持功能連動性]
+        // 顯示網路同步失敗提示
+    function showSyncError() {
+        if (document.getElementById('syncToast')) return; // 避免重複跳出
+        const toast = document.createElement('div');
+        toast.id = 'syncToast';
+        toast.className = 'toast-error';
+        toast.innerHTML = '<span>⚠️ 網路異常，資料僅儲存於本地</span><button onclick="this.remove()">關閉</button>';
+        document.body.appendChild(toast);
+    }
+
+    
     const defaultProducts = [
         "40x120", "40x80", "60x60", "40x60", "40x40", "28x60", "28x40", "36x36", 
         "長高大籃", "超高大籃", "高籃", "中籃", "低特大", "低大", "長低小", "低小", 
@@ -304,10 +320,10 @@
     let shopDatabase = {}; 
     let currentColor = '紫';
     let records = []; 
-    
-// 統一同步函式
+
+    // 統一同步函式
 function saveAll() {
-    // 1. 同步到本地儲存 (保持原有的備份機制)
+    // 1. 同步到本地儲存
     localStorage.setItem('erp_records', JSON.stringify(records));
     localStorage.setItem('erp_config_products_v7', productsTextarea.value);
     localStorage.setItem('erp_config_shops_v7', shopsTextarea.value);
@@ -316,7 +332,6 @@ function saveAll() {
     // 2. 推送到 Google 雲端
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
     
-    // 準備要傳送的完整資料包
     const payload = {
         records: records,
         config: {
@@ -325,6 +340,20 @@ function saveAll() {
             database: shopDatabase
         }
     };
+    
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { "Content-Type": "text/plain" },
+        body: JSON.stringify(payload)
+    })
+    .then(() => console.log("雲端同步成功"))
+    .catch(err => {
+        console.error("雲端同步失敗", err);
+        showSyncError(); // 呼叫錯誤提醒視窗
+    });
+}
+
     
     fetch(SCRIPT_URL, {
         method: 'POST',
