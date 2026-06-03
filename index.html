@@ -730,46 +730,51 @@ function showSyncError() {
         return true;
     }
     function updateUI() {
-        if (records.length === 0) { historyList.innerHTML = '<div class="empty-text">尚未輸入明細</div>'; summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>'; return; }
-        const totalSummary = {}; const barcodeSummary = {}; const returnSummary = {};
-        records.forEach(r => {
-            if (r.isReturn) { returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty; } else {
-                totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty;
-                if (checkNeedBarcode(r.shop)) { barcodeSummary[r.name] = (barcodeSummary[r.name] || 0) + r.qty; }
-            }
-        });
-        let summaryHtml = '<div>';
-        for (const [name, qty] of Object.entries(totalSummary)) {
-            const barcodeQty = barcodeSummary[name] || 0;
-            const barcodeBadge = barcodeQty > 0 ? `<span class="badge-barcode">🏷️ 內含需條碼: ${barcodeQty} 個</span>` : '';
-            summaryHtml += `<div class="summary-item"><div class="summary-row"><span>${name}</span><span class="badge">總備貨 ${qty} 個</span></div>${barcodeQty > 0 ? `<div class="summary-row" style="justify-content: flex-end;">${barcodeBadge}</div>` : ''}</div>`;
+    if (records.length === 0) { historyList.innerHTML = '<div class="empty-text">尚未輸入明細</div>'; summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>'; return; }
+    
+    const totalSummary = {}; const barcodeSummary = {}; const returnSummary = {};
+    records.forEach(r => {
+        if (r.isReturn) { returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty; } else {
+            totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty;
+            if (checkNeedBarcode(r.shop)) { barcodeSummary[r.name] = (barcodeSummary[r.name] || 0) + r.qty; }
         }
-        for (const [name, qty] of Object.entries(returnSummary)) {
-            summaryHtml += `<div class="summary-item" style="background:#fff5f5; border-left-color:#d32f2f;"><div class="summary-row"><span style="color:#d32f2f;">${name} <small>(退換)</small></span><span class="badge" style="background:#d32f2f;">收回 ${qty} 個</span></div></div>`;
-        }
-        summaryList.innerHTML = summaryHtml + '</div>';
-        const shopGroups = {};
-        records.forEach(r => { if (!shopGroups[r.shop]) shopGroups[r.shop] = []; shopGroups[r.shop].push(r); });
-        let historyHtml = '<div>';
-        for (const [shop, items] of Object.entries(shopGroups)) {
-            const info = shopDatabase[shop];
-            const metaStr = info ? `📄 發票: ${info.invoice} | 🏷️ 條碼: ${info.barcode} | 📅 結帳: ${info.billingDate}` : '';
-            historyHtml += `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div><div class="shop-meta">${metaStr}</div>`;
-            items.forEach(item => {
-                const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
-                const noteTag = item.note ? `<br><span class="note-text">📝 備註: ${item.note}</span>` : '';
-                const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
-                let stockCalcHtml = "";
-                if (!item.isReturn) {
-                    const originalLiveStock = suggestNum - item.qty;
-                    stockCalcHtml = originalLiveStock >= 0 ? `<span class="history-stock-live stock-normal">現場原有: ${originalLiveStock}</span>` : `<span class="history-stock-live stock-alert">現場超額: +${Math.abs(originalLiveStock)}</span>`;
-                }
-                historyHtml += `<div class="history-item"><div class="history-info"><div><span>${item.name} ${returnTag}</span></div><div><span class="history-suggest-tag">建議上限: ${item.isReturn ? '-' : suggestNum}</span>${item.isReturn ? '' : stockCalcHtml}</div>${noteTag}</div><div class="history-actions"><input type="number" class="inline-qty-input" value="${item.qty}" min="0" onchange="changeItemQty('${item.id}', this.value)"><span>個</span><button class="btn-delete-item" onclick="deleteItem('${item.id}')" title="移除此品項">❌</button></div></div>`;
-            });
-            historyHtml += `</div>`;
-        }
-        historyList.innerHTML = historyHtml + '</div>';
+    });
+    
+    let summaryHtml = '<div>';
+    for (const [name, qty] of Object.entries(totalSummary)) {
+        const barcodeQty = barcodeSummary[name] || 0;
+        const barcodeBadge = barcodeQty > 0 ? `<span class="badge-barcode">🏷️ 內含需條碼: ${barcodeQty} 個</span>` : '';
+        summaryHtml += `<div class="summary-item"><div class="summary-row"><span>${name}</span><span class="badge">總備貨 ${qty} 個</span></div>${barcodeQty > 0 ? `<div class="summary-row" style="justify-content: flex-end;">${barcodeBadge}</div>` : ''}</div>`;
     }
+    for (const [name, qty] of Object.entries(returnSummary)) {
+        summaryHtml += `<div class="summary-item" style="background:#fff5f5; border-left-color:#d32f2f;"><div class="summary-row"><span style="color:#d32f2f;">${name} <small>(退換)</small></span><span class="badge" style="background:#d32f2f;">收回 ${qty} 個</span></div></div>`;
+    }
+    summaryList.innerHTML = summaryHtml + '</div>';
+
+    const shopGroups = {};
+    records.forEach(r => { if (!shopGroups[r.shop]) shopGroups[r.shop] = []; shopGroups[r.shop].push(r); });
+    let historyHtml = '<div>';
+    for (const [shop, items] of Object.entries(shopGroups)) {
+        const info = shopDatabase[shop];
+        const metaStr = info ? `📄 發票: ${info.invoice} | 🏷️ 條碼: ${info.barcode} | 📅 結帳: ${info.billingDate}` : '';
+        historyHtml += `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div><div class="shop-meta">${metaStr}</div>`;
+        items.forEach(item => {
+            const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
+            const noteTag = item.note ? `<br><span class="note-text">📝 備註: ${item.note}</span>` : '';
+            // 這裡會重新讀取最新的 suggestNum
+            const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
+            let stockCalcHtml = "";
+            if (!item.isReturn) {
+                const originalLiveStock = suggestNum - item.qty;
+                stockCalcHtml = originalLiveStock >= 0 ? `<span class="history-stock-live stock-normal">現場原有: ${originalLiveStock}</span>` : `<span class="history-stock-live stock-alert">現場超額: +${Math.abs(originalLiveStock)}</span>`;
+            }
+            historyHtml += `<div class="history-item"><div class="history-info"><div><span>${item.name} ${returnTag}</span></div><div><span class="history-suggest-tag">建議上限: ${item.isReturn ? '-' : suggestNum}</span>${item.isReturn ? '' : stockCalcHtml}</div>${noteTag}</div><div class="history-actions"><input type="number" class="inline-qty-input" value="${item.qty}" min="0" onchange="changeItemQty('${item.id}', this.value)"><span>個</span><button class="btn-delete-item" onclick="deleteItem('${item.id}')" title="移除此品項">❌</button></div></div>`;
+        });
+        historyHtml += `</div>`;
+    }
+    historyList.innerHTML = historyHtml + '</div>';
+}
+
     document.getElementById('clearBtn').addEventListener('click', () => { 
     if (confirm('確定清空今日所有紀錄嗎？')) { 
         records = []; 
