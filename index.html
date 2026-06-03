@@ -607,12 +607,28 @@ function showSyncError() {
             suggestTip.innerHTML = `💡 <b>${shopName}</b> 的 <span style="color:red;">[${currentColor}]</span> ${baseName} 建議上限量：<span style="color:#2979ff; font-size:18px;">${suggestNum} 個</span>`;
         }
     }
-    function selectColor(color, btn) {
+        function selectColor(color, btn) {
+        // --- 修改開始 ---
+        // 1. 紀錄當前選中的商品名稱 (移除顏色前綴)
+        const currentSelectedName = productSelect.value.replace(/\[.*?\]\s/, '');
+        
         currentColor = color;
         document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
+        
+        // 2. 重新產生選項
         renderProductSelect();
+        
+        // 3. 嘗試把剛剛選中的商品名稱找回來，並加上新顏色
+        const newTarget = `[${currentColor}] ${currentSelectedName}`;
+        if ([...productSelect.options].some(opt => opt.value === newTarget)) {
+            productSelect.value = newTarget;
+        }
+        
+        updateSuggestTip();
+        // --- 修改結束 ---
     }
+
     function adjustQty(amount) {
         let val = parseInt(itemQty.value, 10) || 1;
         val += amount; if (val < 1) val = 1;
