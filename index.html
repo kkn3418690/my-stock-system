@@ -598,15 +598,21 @@ function showSyncError() {
         }
         return 3;
     }
+    
     function updateSuggestTip() {
-        const shopName = shopSelect.value; const selectedOpt = productSelect.options[productSelect.selectedIndex];
-        if (!shopName) { suggestTip.innerHTML = `⚠️ 請先選擇店家才能查看建議量`; return; }
-        if (selectedOpt) {
-            const baseName = selectedOpt.getAttribute('data-base-name');
-            const suggestNum = getSuggestNum(shopName, baseName, currentColor);
-            suggestTip.innerHTML = `💡 <b>${shopName}</b> 的 <span style="color:red;">[${currentColor}]</span> ${baseName} 建議上限量：<span style="color:#2979ff; font-size:18px;">${suggestNum} 個</span>`;
-        }
+    const shopName = shopSelect.value; 
+    const selectedOpt = productSelect.options[productSelect.selectedIndex];
+    if (!shopName) { suggestTip.innerHTML = `⚠️ 請先選擇店家才能查看建議量`; return; }
+    if (selectedOpt) {
+        const baseName = selectedOpt.getAttribute('data-base-name');
+        const suggestNum = getSuggestNum(shopName, baseName, currentColor);
+        // 改為輸入框格式
+        suggestTip.innerHTML = `💡 <b>${shopName}</b> 的 <span style="color:red;">[${currentColor}]</span> ${baseName} 建議上限：
+            <input type="number" id="tempLimitInput" value="${suggestNum}" style="width:60px; font-size:16px; padding:2px; border:1px solid #ccc; border-radius:4px;"> 個 
+            <button onclick="saveTempLimit()" style="padding:2px 8px; cursor:pointer;">更新</button>`;
     }
+}
+
         function selectColor(color, btn) {
         // --- 修改開始 ---
         // 1. 紀錄當前選中的商品名稱 (移除顏色前綴)
