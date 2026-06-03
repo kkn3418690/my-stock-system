@@ -289,15 +289,23 @@
 
 <script>
     // [此處 JS 代碼與原版一致，保持功能連動性]
-        // 顯示網路同步失敗提示
-    function showSyncError() {
-        if (document.getElementById('syncToast')) return; // 避免重複跳出
-        const toast = document.createElement('div');
-        toast.id = 'syncToast';
-        toast.className = 'toast-error';
-        toast.innerHTML = '<span>⚠️ 網路異常，資料僅儲存於本地</span><button onclick="this.remove()">關閉</button>';
-        document.body.appendChild(toast);
-    }
+        // 修改後的 showSyncError
+function showSyncError() {
+    if (document.getElementById('syncToast')) return; 
+    const toast = document.createElement('div');
+    toast.id = 'syncToast';
+    toast.className = 'toast-error';
+    
+    // 改用這種方式建立結構，讓關閉鈕能移除整個 toast
+    toast.innerHTML = '<span>⚠️ 網路異常，資料僅儲存於本地</span>';
+    const btn = document.createElement('button');
+    btn.textContent = '關閉';
+    btn.onclick = function() { toast.remove(); }; // 這裡移除的是 toast 本身
+    
+    toast.appendChild(btn);
+    document.body.appendChild(toast);
+}
+
 
     
     const defaultProducts = [
