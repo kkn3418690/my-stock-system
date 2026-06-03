@@ -732,19 +732,28 @@ function showSyncError() {
     function updateUI() {
     if (records.length === 0) { historyList.innerHTML = '<div class="empty-text">尚未輸入明細</div>'; summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>'; return; }
     
-    const totalSummary = {}; const barcodeSummary = {}; const returnSummary = {};
+        const totalSummary = {}; const barcodeSummary = { "我家條碼": {}, "店家條碼": {} }; const returnSummary = {};
     records.forEach(r => {
         if (r.isReturn) { returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty; } else {
             totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty;
-            if (checkNeedBarcode(r.shop)) { barcodeSummary[r.name] = (barcodeSummary[r.name] || 0) + r.qty; }
+            const shopInfo = shopDatabase[r.shop];
+            const bType = shopInfo ? shopInfo.barcode : "";
+            if (bType === "我家條碼" || bType === "店家條碼") {
+                barcodeSummary[bType][r.name] = (barcodeSummary[bType][r.name] || 0) + r.qty;
+            }
         }
     });
     
     let summaryHtml = '<div>';
     for (const [name, qty] of Object.entries(totalSummary)) {
-        const barcodeQty = barcodeSummary[name] || 0;
-        const barcodeBadge = barcodeQty > 0 ? `<span class="badge-barcode">🏷️ 內含需條碼: ${barcodeQty} 個</span>` : '';
-        summaryHtml += `<div class="summary-item"><div class="summary-row"><span>${name}</span><span class="badge">總備貨 ${qty} 個</span></div>${barcodeQty > 0 ? `<div class="summary-row" style="justify-content: flex-end;">${barcodeBadge}</div>` : ''}</div>`;
+        let barcodeBadges = "";
+        if (barcodeSummary["我家條碼"][name]) {
+            barcodeBadges += `<span class="badge-barcode" style="background:#ff9200;">我家條碼: ${barcodeSummary["我家條碼"][name]}</span>`;
+        }
+        if (barcodeSummary["店家條碼"][name]) {
+            barcodeBadges += `<span class="badge-barcode" style="background:#5c6bc0;">店家條碼: ${barcodeSummary["店家條碼"][name]}</span>`;
+        }
+        summaryHtml += `<div class="summary-item"><div class="summary-row"><span>${name}</span><span class="badge">總備貨 ${qty} 個</span></div>${barcodeBadges !== "" ? `<div class="summary-row" style="justify-content: flex-end; gap:5px; margin-top:5px;">${barcodeBadges}</div>` : ''}</div>`;
     }
     for (const [name, qty] of Object.entries(returnSummary)) {
         summaryHtml += `<div class="summary-item" style="background:#fff5f5; border-left-color:#d32f2f;"><div class="summary-row"><span style="color:#d32f2f;">${name} <small>(退換)</small></span><span class="badge" style="background:#d32f2f;">收回 ${qty} 個</span></div></div>`;
