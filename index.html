@@ -407,10 +407,10 @@ function saveAll() {
         baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
         syncAdminShopOptions();
     });
-function loadSystem() {
+    
+    function loadSystem() {
     buildBillingDateOptions();
     
-    // 1. 定義一個「完成後的渲染」函式，確保無論是雲端還是本地，都能執行這些動作
     const finalizeInit = () => {
         buildShopSelect();
         renderProductSelect();
@@ -418,39 +418,36 @@ function loadSystem() {
         console.log("系統初始化完成");
     };
 
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxSbgSxs77eqrTTJ_5TSRnDBPOi8HpssL0lZaKOIWPfXDZnMFns4_vFYuO2Rfr6f5wQ/exec";
+    // 請確保這裡的網址是你的那個 .../exec 網址
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
     
-    // 2. 優先嘗試從雲端拿資料
     fetch(SCRIPT_URL)
         .then(res => res.json())
         .then(data => {
-            records = data.records;
-            shopDatabase = data.config.database;
-            productsTextarea.value = data.config.products;
-            shopsTextarea.value = data.config.shops;
-            
-            // 轉存到記憶體
-            baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
-            baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
-            
-            finalizeInit(); // 資料抓到了才渲染
+            // 重要：這裡要檢查資料結構是否正確
+            if (data && data.records) {
+                records = data.records;
+                shopDatabase = data.config.database;
+                productsTextarea.value = data.config.products;
+                shopsTextarea.value = data.config.shops;
+                
+                baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
+                baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+            }
+            finalizeInit();
         })
-        .catch(() => {
-            // 3. 雲端失敗才讀本地
-            console.log("使用本地資料備份");
+        .catch((err) => {
+            console.log("雲端讀取失敗或尚未存檔，使用本地備份", err);
+            // 本地讀取邏輯保持不變...
             const savedRecords = localStorage.getItem('erp_records');
             if (savedRecords) { records = JSON.parse(savedRecords); }
-            
             const configProds = localStorage.getItem('erp_config_products_v7');
             if (configProds) { productsTextarea.value = configProds; baseProducts = configProds.split('\n').map(p => p.trim()).filter(p => p !== ''); }
-            
             const configShops = localStorage.getItem('erp_config_shops_v7');
             if (configShops) { shopsTextarea.value = configShops; baseShops = configShops.split('\n').map(s => s.trim()).filter(s => s !== ''); }
-            
             const savedDb = localStorage.getItem('erp_shop_database_v7');
             if (savedDb) { shopDatabase = JSON.parse(savedDb); }
-            
-            finalizeInit(); // 本地讀完也渲染
+            finalizeInit();
         });
 }
 
