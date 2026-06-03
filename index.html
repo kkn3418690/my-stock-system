@@ -614,7 +614,6 @@ function showSyncError() {
 }
 
         function selectColor(color, btn) {
-        // --- 修改開始 ---
         // 1. 紀錄當前選中的商品名稱 (移除顏色前綴)
         const currentSelectedName = productSelect.value.replace(/\[.*?\]\s/, '');
         
@@ -632,7 +631,23 @@ function showSyncError() {
         }
         
         updateSuggestTip();
-        // --- 修改結束 ---
+    }
+
+    // --- 將 saveTempLimit 獨立出來放在外面 ---
+    function saveTempLimit() {
+        const shopName = shopSelect.value;
+        const selectedOpt = productSelect.options[productSelect.selectedIndex];
+        const baseName = selectedOpt.getAttribute('data-base-name');
+        const newLimit = parseInt(document.getElementById('tempLimitInput').value, 10);
+        
+        if (shopName && baseName && !isNaN(newLimit)) {
+            if(!shopDatabase[shopName].suggestQty[baseName]) shopDatabase[shopName].suggestQty[baseName] = {};
+            shopDatabase[shopName].suggestQty[baseName][currentColor] = newLimit;
+            
+            saveAll(); // 自動存檔同步到雲端
+            updateSuggestTip(); // 重新整理畫面
+            alert('💾 已更新該店該品項的備貨上限！');
+        }
     }
 
     function adjustQty(amount) {
