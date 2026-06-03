@@ -533,10 +533,10 @@ function showSyncError() {
         if(!shopDatabase[shop].suggestQty) shopDatabase[shop].suggestQty = {};
         if(!shopDatabase[shop].suggestQty[prod]) { shopDatabase[shop].suggestQty[prod] = { '紫': 3, '紅': 3, '黑': 3, '白': 3 }; }
         const q = shopDatabase[shop].suggestQty[prod];
-        inputColorP.value = q['紫'] !== undefined ? q['紫'] : 3;
-        inputColorR.value = q['紅'] !== undefined ? q['紅'] : 3;
-        inputColorB.value = q['黑'] !== undefined ? q['黑'] : 3;
-        inputColorW.value = q['白'] !== undefined ? q['白'] : 3;
+        inputColorP.value = q['紫'] !== undefined ? q['紫'] : 5;
+        inputColorR.value = q['紅'] !== undefined ? q['紅'] : 5;
+        inputColorB.value = q['黑'] !== undefined ? q['黑'] : 5;
+        inputColorW.value = q['白'] !== undefined ? q['白'] : 5;
     }
 
     function syncLiveInputToMemory() {
