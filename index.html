@@ -662,8 +662,8 @@ function showSyncError() {
         const qty = parseInt(itemQty.value, 10); const typeReturn = isReturn.checked; const note = noteInput.value.trim();
         if (!shopName) { alert('請先選擇店家！'); return; }
         if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
-        const recordId = Date.now() + Math.random().toString(36).substr(2, 5);
-        records.push({ id: recordId, shop: shopName, name: productName, baseName: baseProdName, color: currentColor, qty: qty, isReturn: typeReturn, note: note });
+        const recordId = crypto.randomUUID();
+        records.push({ id: crypto.randomUUID(), shop: shopName, name: productName, baseName: baseProdName, color: currentColor, qty: qty, isReturn: typeReturn, note: note });
         saveAll();
         itemQty.value = 1; isReturn.checked = false; noteInput.value = ""; updateUI();
     });
@@ -790,12 +790,13 @@ function showSyncError() {
             return indexA - indexB;
         });
 
-        sortedKeys.forEach(key => {
+                        sortedKeys.forEach(key => {
             const item = groupedItems[key];
             const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
             const noteText = item.notes.length > 0 ? `<br><span class="note-text">📝 備註: ${item.notes.join("；")}</span>` : '';
             const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
             
+            // 替換這一段
             historyHtml += `<div class="history-item">
                 <div class="history-info">
                     <div><span>${item.name} ${returnTag}</span></div>
@@ -803,10 +804,13 @@ function showSyncError() {
                     ${noteText}
                 </div>
                 <div class="history-actions">
-                    <span style="font-weight:bold; font-size:16px;">${item.qty} 個</span>
+                    <input type="number" class="inline-qty-input" value="${item.qty}" 
+                           onchange="changeGroupQty('${key}', this.value)">
+                    <button class="btn btn-danger" onclick="deleteGroup('${key}')" style="padding: 5px 8px;">❌</button>
                 </div>
             </div>`;
         });
+
         historyHtml += `</div>`;
     }
     historyList.innerHTML = historyHtml + '</div>';
@@ -829,6 +833,47 @@ function showSyncError() {
         navigator.clipboard.writeText(text).then(() => alert('總備貨數已複製！'));
     });
     loadSystem();
+    
+    // 修改分組後的數量 (已修正邏輯，確保店家資訊不遺失)
+function changeGroupQty(key, newQty) {
+    const [name, isReturnStr] = key.split('-');
+    const isReturn = isReturnStr === 'true';
+    const val = parseInt(newQty, 10);
+    
+    // 找出該筆紀錄原本屬於哪家店
+    const targetRecord = records.find(r => r.name === name && String(r.isReturn) === isReturnStr);
+    if (!targetRecord) return;
+    const shopName = targetRecord.shop;
+    
+    // 1. 移除該店家、該品項的所有舊紀錄
+    records = records.filter(r => !(r.name === name && String(r.isReturn) === isReturnStr && r.shop === shopName));
+    
+    // 2. 寫入一筆更新後的新紀錄
+    records.push({ 
+        id: Date.now() + Math.random(), 
+        shop: shopName, 
+        name: name, 
+        qty: val, 
+        isReturn: isReturn, 
+        baseName: name.replace(/\[.*?\]\s/, '') 
+    });
+    
+    saveAll();
+    updateUI();
+}
+
+// 刪除該組所有紀錄
+function deleteGroup(key) {
+    if(confirm('確定要刪除此品項的所有紀錄嗎？')) {
+        const [name, isReturnStr] = key.split('-');
+        // 移除該店家該品項的所有紀錄
+        records = records.filter(r => !(r.name === name && String(r.isReturn) === isReturnStr));
+        saveAll();
+        updateUI();
+    }
+}
+
+
 </script>
 
 </body>
