@@ -729,10 +729,16 @@ function showSyncError() {
         if (bc === "不需要條碼" || bc === "無條碼" || bc === "無" || bc === "" || bc === "-") return false;
         return true;
     }
-    function updateUI() {
-    if (records.length === 0) { historyList.innerHTML = '<div class="empty-text">尚未輸入明細</div>'; summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>'; return; }
     
-        const totalSummary = {}; const barcodeSummary = { "我家條碼": {}, "店家條碼": {} }; const returnSummary = {};
+    function updateUI() {
+    if (records.length === 0) {
+        historyList.innerHTML = '<div class="empty-text">尚未輸入明細</div>';
+        summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>';
+        return;
+    }
+
+    // 1. 全店總加總邏輯 (維持不變)
+    const totalSummary = {}; const barcodeSummary = { "我家條碼": {}, "店家條碼": {} }; const returnSummary = {};
     records.forEach(r => {
         if (r.isReturn) { returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty; } else {
             totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty;
@@ -743,41 +749,63 @@ function showSyncError() {
             }
         }
     });
-    
+
+    // --- (保持原有的 summaryList 渲染區塊) ---
     let summaryHtml = '<div>';
     for (const [name, qty] of Object.entries(totalSummary)) {
         let barcodeBadges = "";
-        if (barcodeSummary["我家條碼"][name]) {
-            barcodeBadges += `<span class="badge-barcode" style="background:#ff9200;">我家條碼: ${barcodeSummary["我家條碼"][name]}</span>`;
-        }
-        if (barcodeSummary["店家條碼"][name]) {
-            barcodeBadges += `<span class="badge-barcode" style="background:#5c6bc0;">店家條碼: ${barcodeSummary["店家條碼"][name]}</span>`;
-        }
+        if (barcodeSummary["我家條碼"][name]) barcodeBadges += `<span class="badge-barcode" style="background:#ff9200;">我家: ${barcodeSummary["我家條碼"][name]}</span>`;
+        if (barcodeSummary["店家條碼"][name]) barcodeBadges += `<span class="badge-barcode" style="background:#5c6bc0;">店家: ${barcodeSummary["店家條碼"][name]}</span>`;
         summaryHtml += `<div class="summary-item"><div class="summary-row"><span>${name}</span><span class="badge">總備貨 ${qty} 個</span></div>${barcodeBadges !== "" ? `<div class="summary-row" style="justify-content: flex-end; gap:5px; margin-top:5px;">${barcodeBadges}</div>` : ''}</div>`;
     }
-    for (const [name, qty] of Object.entries(returnSummary)) {
-        summaryHtml += `<div class="summary-item" style="background:#fff5f5; border-left-color:#d32f2f;"><div class="summary-row"><span style="color:#d32f2f;">${name} <small>(退換)</small></span><span class="badge" style="background:#d32f2f;">收回 ${qty} 個</span></div></div>`;
-    }
+    for (const [name, qty] of Object.entries(returnSummary)) { summaryHtml += `<div class="summary-item" style="background:#fff5f5; border-left-color:#d32f2f;"><div class="summary-row"><span style="color:#d32f2f;">${name} <small>(退換)</small></span><span class="badge" style="background:#d32f2f;">收回 ${qty} 個</span></div></div>`; }
     summaryList.innerHTML = summaryHtml + '</div>';
 
+    // 2. 各店家明細：智能分組、排序、合併
     const shopGroups = {};
     records.forEach(r => { if (!shopGroups[r.shop]) shopGroups[r.shop] = []; shopGroups[r.shop].push(r); });
+
     let historyHtml = '<div>';
     for (const [shop, items] of Object.entries(shopGroups)) {
         const info = shopDatabase[shop];
         const metaStr = info ? `📄 發票: ${info.invoice} | 🏷️ 條碼: ${info.barcode} | 📅 結帳: ${info.billingDate}` : '';
         historyHtml += `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div><div class="shop-meta">${metaStr}</div>`;
+
+        // 進行分組與合併
+        const groupedItems = {};
         items.forEach(item => {
-            const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
-            const noteTag = item.note ? `<br><span class="note-text">📝 備註: ${item.note}</span>` : '';
-            // 這裡會重新讀取最新的 suggestNum
-            const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
-            let stockCalcHtml = "";
-            if (!item.isReturn) {
-                const originalLiveStock = suggestNum - item.qty;
-                stockCalcHtml = originalLiveStock >= 0 ? `<span class="history-stock-live stock-normal">現場原有: ${originalLiveStock}</span>` : `<span class="history-stock-live stock-alert">現場超額: +${Math.abs(originalLiveStock)}</span>`;
+            const key = `${item.name}-${item.isReturn}`;
+            if (!groupedItems[key]) {
+                groupedItems[key] = { ...item, notes: item.note ? [item.note] : [] };
+            } else {
+                groupedItems[key].qty += item.qty;
+                if (item.note) groupedItems[key].notes.push(item.note);
             }
-            historyHtml += `<div class="history-item"><div class="history-info"><div><span>${item.name} ${returnTag}</span></div><div><span class="history-suggest-tag">建議上限: ${item.isReturn ? '-' : suggestNum}</span>${item.isReturn ? '' : stockCalcHtml}</div>${noteTag}</div><div class="history-actions"><input type="number" class="inline-qty-input" value="${item.qty}" min="0" onchange="changeItemQty('${item.id}', this.value)"><span>個</span><button class="btn-delete-item" onclick="deleteItem('${item.id}')" title="移除此品項">❌</button></div></div>`;
+        });
+
+        // 依照 baseProducts 的順序排序
+        const sortedKeys = Object.keys(groupedItems).sort((a, b) => {
+            const indexA = baseProducts.indexOf(groupedItems[a].baseName);
+            const indexB = baseProducts.indexOf(groupedItems[b].baseName);
+            return indexA - indexB;
+        });
+
+        sortedKeys.forEach(key => {
+            const item = groupedItems[key];
+            const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
+            const noteText = item.notes.length > 0 ? `<br><span class="note-text">📝 備註: ${item.notes.join("；")}</span>` : '';
+            const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
+            
+            historyHtml += `<div class="history-item">
+                <div class="history-info">
+                    <div><span>${item.name} ${returnTag}</span></div>
+                    <div><span class="history-suggest-tag">建議上限: ${suggestNum}</span></div>
+                    ${noteText}
+                </div>
+                <div class="history-actions">
+                    <span style="font-weight:bold; font-size:16px;">${item.qty} 個</span>
+                </div>
+            </div>`;
         });
         historyHtml += `</div>`;
     }
