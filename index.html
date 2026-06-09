@@ -531,7 +531,7 @@ function showSyncError() {
         colorInputsBox.style.display = 'block';
         colorInputsTitle.innerHTML = `⚙️ 設定 <b>${shop}</b> 的 【${prod}】 各色上限`;
         if(!shopDatabase[shop].suggestQty) shopDatabase[shop].suggestQty = {};
-        if(!shopDatabase[shop].suggestQty[prod]) { shopDatabase[shop].suggestQty[prod] = { '紫': 3, '紅': 3, '黑': 3, '白': 3 }; }
+        if(!shopDatabase[shop].suggestQty[prod]) { shopDatabase[shop].suggestQty[prod] = { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; }
         const q = shopDatabase[shop].suggestQty[prod];
         inputColorP.value = q['紫'] !== undefined ? q['紫'] : 5;
         inputColorR.value = q['紅'] !== undefined ? q['紅'] : 5;
@@ -562,7 +562,7 @@ function showSyncError() {
                 cleanedDatabase[shop] = shopDatabase[shop];
                 if(!cleanedDatabase[shop].suggestQty) cleanedDatabase[shop].suggestQty = {};
                 const cleanedQty = {};
-                baseProducts.forEach(p => { cleanedQty[p] = shopDatabase[shop].suggestQty[p] || { '紫': 3, '紅': 3, '黑': 3, '白': 3 }; });
+                baseProducts.forEach(p => { cleanedQty[p] = shopDatabase[shop].suggestQty[p] || { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; });
                 cleanedDatabase[shop].suggestQty = cleanedQty;
             } else { cleanedDatabase[shop] = { invoice: "免開發票", barcode: "不需要條碼", billingDate: "25號結", suggestQty: {} }; }
         });
