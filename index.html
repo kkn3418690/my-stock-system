@@ -737,28 +737,38 @@ function showSyncError() {
         return;
     }
 
-    // 1. 全店總加總邏輯 (維持不變)
-    const totalSummary = {}; const barcodeSummary = { "我家條碼": {}, "店家條碼": {} }; const returnSummary = {};
+        // 1. 全店總加總邏輯 (修改：無論是否為退貨，一律累加至總數)
+    const totalSummary = {}; 
     records.forEach(r => {
-        if (r.isReturn) { returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty; } else {
-            totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty;
-            const shopInfo = shopDatabase[r.shop];
-            const bType = shopInfo ? shopInfo.barcode : "";
-            if (bType === "我家條碼" || bType === "店家條碼") {
-                barcodeSummary[bType][r.name] = (barcodeSummary[bType][r.name] || 0) + r.qty;
-            }
+        if (!totalSummary[r.baseName]) {
+            totalSummary[r.baseName] = { '紫': 0, '紅': 0, '黑': 0, '白': 0 };
+        }
+        
+        // 不再判斷 !r.isReturn，直接累加數量
+        if (totalSummary[r.baseName].hasOwnProperty(r.color)) {
+            totalSummary[r.baseName][r.color] += r.qty;
         }
     });
 
-    // --- (保持原有的 summaryList 渲染區塊) ---
+    // 2. 渲染區塊 (這裡就是排序的核心)
     let summaryHtml = '<div>';
-    for (const [name, qty] of Object.entries(totalSummary)) {
-        let barcodeBadges = "";
-        if (barcodeSummary["我家條碼"][name]) barcodeBadges += `<span class="badge-barcode" style="background:#ff9200;">我家: ${barcodeSummary["我家條碼"][name]}</span>`;
-        if (barcodeSummary["店家條碼"][name]) barcodeBadges += `<span class="badge-barcode" style="background:#5c6bc0;">店家: ${barcodeSummary["店家條碼"][name]}</span>`;
-        summaryHtml += `<div class="summary-item"><div class="summary-row"><span>${name}</span><span class="badge">總備貨 ${qty} 個</span></div>${barcodeBadges !== "" ? `<div class="summary-row" style="justify-content: flex-end; gap:5px; margin-top:5px;">${barcodeBadges}</div>` : ''}</div>`;
-    }
-    for (const [name, qty] of Object.entries(returnSummary)) { summaryHtml += `<div class="summary-item" style="background:#fff5f5; border-left-color:#d32f2f;"><div class="summary-row"><span style="color:#d32f2f;">${name} <small>(退換)</small></span><span class="badge" style="background:#d32f2f;">收回 ${qty} 個</span></div></div>`; }
+    // 這裡使用 baseProducts 陣列進行迴圈，確保顯示順序跟後台設定檔完全一樣
+    baseProducts.forEach(prodName => {
+        // 檢查該品項是否有資料，且數量大於 0
+        if (totalSummary[prodName] && Object.values(totalSummary[prodName]).some(v => v > 0)) {
+            const counts = totalSummary[prodName];
+            summaryHtml += `
+            <div class="summary-item" style="padding: 8px 10px;">
+                <div class="summary-row" style="margin-bottom: 5px; font-weight: bold;">${prodName}</div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; text-align: center;">
+                    <div style="background:#9B5DE5; color:white; padding:4px; border-radius:4px; font-size:13px;">紫 ${counts['紫']}</div>
+                    <div style="background:#FF5470; color:white; padding:4px; border-radius:4px; font-size:13px;">紅 ${counts['紅']}</div>
+                    <div style="background:#1A1A24; color:white; padding:4px; border-radius:4px; font-size:13px;">黑 ${counts['黑']}</div>
+                    <div style="background:#7f8c8d; color:white; padding:4px; border-radius:4px; font-size:13px;">白 ${counts['白']}</div>
+                </div>
+            </div>`;
+        }
+    });
     summaryList.innerHTML = summaryHtml + '</div>';
 
     // 2. 各店家明細：智能分組、排序、合併
