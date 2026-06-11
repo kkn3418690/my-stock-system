@@ -751,14 +751,36 @@ function showSyncError() {
     });
 
     // --- (保持原有的 summaryList 渲染區塊) ---
-    let summaryHtml = '<div>';
-    for (const [name, qty] of Object.entries(totalSummary)) {
-        let barcodeBadges = "";
-        if (barcodeSummary["我家條碼"][name]) barcodeBadges += `<span class="badge-barcode" style="background:#ff9200;">我家: ${barcodeSummary["我家條碼"][name]}</span>`;
-        if (barcodeSummary["店家條碼"][name]) barcodeBadges += `<span class="badge-barcode" style="background:#5c6bc0;">店家: ${barcodeSummary["店家條碼"][name]}</span>`;
-        summaryHtml += `<div class="summary-item"><div class="summary-row"><span>${name}</span><span class="badge">總備貨 ${qty} 個</span></div>${barcodeBadges !== "" ? `<div class="summary-row" style="justify-content: flex-end; gap:5px; margin-top:5px;">${barcodeBadges}</div>` : ''}</div>`;
+        // 1. 全店總加總邏輯 (排序與底色客製化)
+    let summaryHtml = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+    
+    // 定義顏色對應的背景色與文字色
+    const colorBgMap = { '紫': '#f3e5f5', '紅': '#ffebee', '黑': '#e0e0e0', '白': '#ffffff' };
+    const colorTextMap = { '紫': '#7b1fa2', '紅': '#c62828', '黑': '#000000', '白': '#555555' };
+
+    // 依照後台設定的商品順序進行雙重迴圈排序 (先依品項，再依顏色)
+    baseProducts.forEach(baseName => {
+        ['紫', '紅', '黑', '白'].forEach(c => {
+            const fullName = `[${c}] ${baseName}`;
+            if (totalSummary[fullName]) {
+                const bgColor = colorBgMap[c];
+                const textColor = colorTextMap[c];
+                summaryHtml += `
+                    <div style="background: ${bgColor}; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(0,0,0,0.1);">
+                        <span style="font-weight: bold; color: ${textColor}; font-size: 16px;">${baseName} (${c})</span>
+                        <span style="font-size: 22px; font-weight: 900; color: #000;">${totalSummary[fullName]} 個</span>
+                    </div>`;
+            }
+        });
+    });
+
+    // 加入退換貨的顯示
+    for (const [name, qty] of Object.entries(returnSummary)) { 
+        summaryHtml += `<div style="background:#ffebee; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 2px dashed #d32f2f;">
+            <span style="font-weight: bold; color:#d32f2f;">${name} <small>(退換貨)</small></span>
+            <span style="font-size: 22px; font-weight: 900; color: #d32f2f;">${qty} 個</span>
+        </div>`; 
     }
-    for (const [name, qty] of Object.entries(returnSummary)) { summaryHtml += `<div class="summary-item" style="background:#fff5f5; border-left-color:#d32f2f;"><div class="summary-row"><span style="color:#d32f2f;">${name} <small>(退換)</small></span><span class="badge" style="background:#d32f2f;">收回 ${qty} 個</span></div></div>`; }
     summaryList.innerHTML = summaryHtml + '</div>';
 
     // 2. 各店家明細：智能分組、排序、合併
