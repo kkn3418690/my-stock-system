@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>智慧備貨與雲端匯出ERP系統</title>
+    <title>竣泰企業社智慧備貨與雲端匯出ERP系統</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -64,7 +64,10 @@
         
         h2 { font-size: 17px; margin-bottom: 10px; border-left: 4px solid var(--primary); padding-left: 8px; display: flex; justify-content: space-between; align-items: center; }
         
-        .summary-box { background: #fff0f5; border: 2px solid #ffb6c1; }
+        
+        /* 修改後 (請在 style 中找到對應區塊進行調整) */
+        .summary-box { background: #fff0f5; border: 2px solid #ffb6c1; padding: 10px; } /* 內距縮小 */
+        .summary-box > div { display: flex; flex-direction: column; gap: 3px; } /* 這裡原本可能是 8px，改為 3px */
         .summary-item { font-weight: bold; font-size: 15px; background: #ffffff; border-radius: 6px; margin-bottom: 5px; padding: 10px; border-left: 4px solid var(--primary); display: flex; flex-direction: column; gap: 4px; }
         .summary-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
         .badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px; }
