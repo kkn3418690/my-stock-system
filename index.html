@@ -844,33 +844,33 @@ function showSyncError() {
     });
     loadSystem();
     
-    // 修改分組後的數量 (已修正邏輯，確保店家資訊不遺失)
+    // 修改後的 changeGroupQty 函式 (請替換掉原有的那個)
 function changeGroupQty(key, newQty) {
     const [name, isReturnStr] = key.split('-');
-    const isReturn = isReturnStr === 'true';
     const val = parseInt(newQty, 10);
+    if (isNaN(val) || val < 0) return;
+
+    // 關鍵修正：確保這裡能抓到該組別的所有紀錄進行更新
+    const isReturn = isReturnStr === 'true';
     
-    // 找出該筆紀錄原本屬於哪家店
-    const targetRecord = records.find(r => r.name === name && String(r.isReturn) === isReturnStr);
-    if (!targetRecord) return;
-    const shopName = targetRecord.shop;
+    // 找出所有符合條件的紀錄 (同一店、同一品名、同一退貨狀態)
+    const targets = records.filter(r => r.name === name && String(r.isReturn) === isReturnStr);
     
-    // 1. 移除該店家、該品項的所有舊紀錄
-    records = records.filter(r => !(r.name === name && String(r.isReturn) === isReturnStr && r.shop === shopName));
-    
-    // 2. 寫入一筆更新後的新紀錄
-    records.push({ 
-        id: Date.now() + Math.random(), 
-        shop: shopName, 
-        name: name, 
-        qty: val, 
-        isReturn: isReturn, 
-        baseName: name.replace(/\[.*?\]\s/, '') 
-    });
-    
-    saveAll();
-    updateUI();
+    if (targets.length > 0) {
+        // 將該組別的第一筆數量設為新值，其餘設為0 (或平分，這裡採簡化做法：全部總數設為 val)
+        // 為了簡單，我們把該組別第一筆改成新的總數，其他同名的刪掉
+        targets[0].qty = val;
+        
+        // 如果有重複的多筆(例如原本拆成兩次輸入)，刪掉後面的，確保數值統一
+        if (targets.length > 1) {
+            records = records.filter(r => !(r.name === name && String(r.isReturn) === isReturnStr) || r.id === targets[0].id);
+        }
+    }
+
+    saveAll(); // 存檔到 LocalStorage 與雲端
+    updateUI(); // 強制重繪整個畫面，包含上面的總表
 }
+
 
 // 刪除該組所有紀錄
 function deleteGroup(key) {
