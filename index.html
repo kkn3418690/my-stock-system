@@ -153,7 +153,7 @@
     </div>
 
     <div id="work-tab" class="tab-content active">
-        <h1>🏪 智慧備貨與資料管理系統</h1>
+        <h1>🏪 竣泰企業社智慧備貨與資料管理系統</h1>
         
         <div class="card">
             <label for="shopSelect">1. 選擇店家</label>
@@ -256,7 +256,7 @@
                             <select id="selectBarcode">
                                 <option value="不需要條碼">不需要條碼</option>
                                 <option value="店家條碼">店家條碼</option>
-                                <option value="我家條碼">我家條碼</option>
+                                <option value="竣泰條碼">竣泰條碼</option>
                                 <option value="">[空白] 自行輸入 ➔</option>
                             </select>
                             <input type="text" id="inputBarcodeCustom" placeholder="手動輸入條碼規範..." style="display: none;">
@@ -539,7 +539,7 @@ function showSyncError() {
         const dbBarcode = shopDatabase[shop].barcode || "不需要條碼";
         const dbBilling = shopDatabase[shop].billingDate || "25號結";
         if(dbInvoice === "免開發票" || dbInvoice === "開發票") { selectInvoice.value = dbInvoice; inputInvoiceCustom.style.display = "none"; } else { selectInvoice.value = ""; inputInvoiceCustom.style.display = "block"; inputInvoiceCustom.value = dbInvoice; }
-        if(dbBarcode === "不需要條碼" || dbBarcode === "店家條碼" || dbBarcode === "我家條碼") { selectBarcode.value = dbBarcode; inputBarcodeCustom.style.display = "none"; } else { selectBarcode.value = ""; inputBarcodeCustom.style.display = "block"; inputBarcodeCustom.value = dbBarcode; }
+        if(dbBarcode === "不需要條碼" || dbBarcode === "店家條碼" || dbBarcode === "竣泰條碼") { selectBarcode.value = dbBarcode; inputBarcodeCustom.style.display = "none"; } else { selectBarcode.value = ""; inputBarcodeCustom.style.display = "block"; inputBarcodeCustom.value = dbBarcode; }
         selectBillingDate.value = dbBilling;
         onAdminProductChange();
     }
