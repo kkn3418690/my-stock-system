@@ -750,42 +750,54 @@ function showSyncError() {
     }
     
     function updateUI() {
-    // 若沒有紀錄，顯示空白提示並結束
     if (records.length === 0) {
         historyList.innerHTML = '<div class="empty-text">尚未輸入明細</div>';
         summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>';
         return;
     }
 
-    // --- 第一部分：計算全店總加總 (用於上方總表) ---
-    const totalSummary = {}; 
-    const returnSummary = {};
+    // 1. 全店總加總邏輯 (維持不變)
+    const totalSummary = {}; const barcodeSummary = { "我家條碼": {}, "店家條碼": {} }; const returnSummary = {};
     records.forEach(r => {
-        if (r.isReturn) { 
-            returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty; 
-        } else { 
-            totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty; 
+        if (r.isReturn) { returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty; } else {
+            totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty;
+            const shopInfo = shopDatabase[r.shop];
+            const bType = shopInfo ? shopInfo.barcode : "";
+            if (bType === "我家條碼" || bType === "店家條碼") {
+                barcodeSummary[bType][r.name] = (barcodeSummary[bType][r.name] || 0) + r.qty;
+            }
         }
     });
 
+    // --- (保持原有的 summaryList 渲染區塊) ---
+        // 1. 全店總加總邏輯 (排序與底色客製化)
     let summaryHtml = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+    
+    // 定義顏色對應的背景色與文字色
     const colorBgMap = { '紫': '#f3e5f5', '紅': '#ffebee', '黑': '#e0e0e0', '白': '#ffffff' };
     const colorTextMap = { '紫': '#7b1fa2', '紅': '#c62828', '黑': '#000000', '白': '#555555' };
 
+    // 依照後台設定的商品順序進行雙重迴圈排序
     baseProducts.forEach(baseName => {
         ['紫', '紅', '黑', '白'].forEach(c => {
             const fullName = `[${c}] ${baseName}`;
             if (totalSummary[fullName]) {
+                const bgColor = colorBgMap[c];
+                const textColor = colorTextMap[c];
+                
+                // [修改區] 將原本的 div 改為帶有 class 的結構，並加入 onclick 事件
                 summaryHtml += `
-                   <div class="summary-item-card" onclick="this.classList.toggle('checked')"
-                        style="background: ${colorBgMap[c]}; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                     <span style="font-weight: bold; color: ${colorTextMap[c]}; font-size: 15px;">${baseName} (${c})</span>
+                   <div class="summary-item-card" 
+                        onclick="this.classList.toggle('checked')"
+                        style="background: ${bgColor}; padding: 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                     <span style="font-weight: bold; color: ${textColor}; font-size: 15px;">${baseName} (${c})</span>
                      <span style="font-size: 18px; font-weight: 900; color: #000;">${totalSummary[fullName]} 個</span>
                    </div>`;
             }
         });
     });
-    // 加入退換貨區塊
+
+    // 加入退換貨的顯示
     for (const [name, qty] of Object.entries(returnSummary)) { 
         summaryHtml += `<div style="background:#ffebee; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 2px dashed #d32f2f;">
             <span style="font-weight: bold; color:#d32f2f;">${name} <small>(退換貨)</small></span>
@@ -794,50 +806,56 @@ function showSyncError() {
     }
     summaryList.innerHTML = summaryHtml + '</div>';
 
-    // --- 第二部分：依條碼規範分組明細 (核心邏輯) ---
-    
-    // 建立一個巢狀物件，用來儲存條碼分類後的資料
-    const barcodeGroups = {}; 
-    
-    records.forEach(r => {
-        // 從 shopDatabase 讀取該店的條碼設定，若無則歸類為"無須分類"
-        const info = shopDatabase[r.shop];
-        const bType = (info && info.barcode) ? info.barcode : "無須分類";
-        
-        // 確保結構存在
-        if (!barcodeGroups[bType]) barcodeGroups[bType] = {};
-        if (!barcodeGroups[bType][r.shop]) barcodeGroups[bType][r.shop] = [];
-        
-        // 將紀錄放入該條碼類別下的該店家群組中
-        barcodeGroups[bType][r.shop].push(r);
-    });
+    // 2. 各店家明細：智能分組、排序、合併
+    const shopGroups = {};
+    records.forEach(r => { if (!shopGroups[r.shop]) shopGroups[r.shop] = []; shopGroups[r.shop].push(r); });
 
-    // 開始渲染 HTML
     let historyHtml = '<div>';
-    
-    // 遍歷每一個「條碼類別」
-    for (const [bType, shops] of Object.entries(barcodeGroups)) {
-        // 渲染條碼類別標題
-        historyHtml += `<div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #dee2e6;">
-                        <h3 style="color: #007AFF; margin-bottom: 8px; font-size: 16px;">🏷️ 條碼規範：${bType}</h3>`;
-        
-        // 遍歷該類別下的「店家」
-        for (const [shop, items] of Object.entries(shops)) {
-            historyHtml += `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div>`;
+    for (const [shop, items] of Object.entries(shopGroups)) {
+        const info = shopDatabase[shop];
+        const metaStr = info ? `📄 發票: ${info.invoice} | 🏷️ 條碼: ${info.barcode} | 📅 結帳: ${info.billingDate}` : '';
+        historyHtml += `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div><div class="shop-meta">${metaStr}</div>`;
+
+        // 進行分組與合併
+        const groupedItems = {};
+        items.forEach(item => {
+            const key = `${item.name}-${item.isReturn}`;
+            if (!groupedItems[key]) {
+                groupedItems[key] = { ...item, notes: item.note ? [item.note] : [] };
+            } else {
+                groupedItems[key].qty += item.qty;
+                if (item.note) groupedItems[key].notes.push(item.note);
+            }
+        });
+
+        // 依照 baseProducts 的順序排序
+        const sortedKeys = Object.keys(groupedItems).sort((a, b) => {
+            const indexA = baseProducts.indexOf(groupedItems[a].baseName);
+            const indexB = baseProducts.indexOf(groupedItems[b].baseName);
+            return indexA - indexB;
+        });
+
+                        sortedKeys.forEach(key => {
+            const item = groupedItems[key];
+            const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
+            const noteText = item.notes.length > 0 ? `<br><span class="note-text">📝 備註: ${item.notes.join("；")}</span>` : '';
+            const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
             
-            // 渲染該店家的每一筆紀錄
-            items.forEach(item => {
-                const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
-                historyHtml += `<div class="history-item">
-                    <div class="history-info"><div><span>${item.name} ${returnTag}</span></div></div>
-                    <div class="history-actions">
-                        <input type="number" class="inline-qty-input" value="${item.qty}" onchange="changeGroupQty('${item.name}-${item.isReturn}', this.value)">
-                        <button class="btn btn-danger" onclick="deleteGroup('${item.name}-${item.isReturn}')" style="padding: 5px 8px;">❌</button>
-                    </div>
-                </div>`;
-            });
-            historyHtml += `</div>`;
-        }
+            // 替換這一段
+            historyHtml += `<div class="history-item">
+                <div class="history-info">
+                    <div><span>${item.name} ${returnTag}</span></div>
+                    <div><span class="history-suggest-tag">建議上限: ${suggestNum}</span></div>
+                    ${noteText}
+                </div>
+                <div class="history-actions">
+                    <input type="number" class="inline-qty-input" value="${item.qty}" 
+                           onchange="changeGroupQty('${key}', this.value)">
+                    <button class="btn btn-danger" onclick="deleteGroup('${key}')" style="padding: 5px 8px;">❌</button>
+                </div>
+            </div>`;
+        });
+
         historyHtml += `</div>`;
     }
     historyList.innerHTML = historyHtml + '</div>';
