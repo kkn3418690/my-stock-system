@@ -142,6 +142,15 @@
         .toast-error { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #ff4d4f; color: white; padding: 15px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
         .toast-error button { background: white; color: #ff4d4f; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 
+        /* 貼在 <style> 區塊內 */
+        body { padding-bottom: 120px; }
+        #historyBar { 
+            position: fixed; bottom: 0; left: 0; right: 0; 
+            background: #333; color: white; padding: 12px; 
+            z-index: 9999; box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
+            display: block; 
+        }
+
     </style>
 </head>
 <body>
@@ -434,6 +443,9 @@ function showSyncError() {
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         activeBtn.classList.add('active');
+        // 貼在 switchTab 函式裡面最後面
+        const bar = document.getElementById('historyBar');
+        bar.style.display = (tabId === 'work-tab') ? 'block' : 'none';
     }
 
     btnWorkTab.addEventListener('click', function() { switchTab('work-tab', this); });
@@ -691,6 +703,12 @@ function showSyncError() {
         records.push({ id: crypto.randomUUID(), shop: shopName, name: productName, baseName: baseProdName, color: currentColor, qty: qty, isReturn: typeReturn, note: note });
         saveAll();
         itemQty.value = 1; isReturn.checked = false; noteInput.value = ""; updateUI();
+        // 貼在 addBtn 的點擊事件函數內，最後一行
+        const last = document.getElementById('lastRecord');
+        const second = document.getElementById('secondLastRecord');
+        const newText = `${shopSelect.value} | ${productSelect.value} x ${itemQty.value} ${isReturn.checked ? '(退)' : ''}`;
+        second.textContent = `2. ${last.textContent.replace('1. ', '')}`;
+        last.textContent = `1. ${newText}`;
     });
     function changeItemQty(id, newQty) {
         const val = parseInt(newQty, 10); if (isNaN(val) || val < 0) return;
@@ -908,8 +926,14 @@ function deleteGroup(key) {
     }
 }
 
-
 </script>
+
+    <!-- 貼在 </body> 的上一行 -->
+<div id="historyBar">
+    <div style="font-weight: bold; margin-bottom: 5px; color: #ffeb3b;">🕒 最近兩筆紀錄：</div>
+    <div id="lastRecord" style="margin-bottom: 3px; font-size: 14px;">1. (等待記錄...)</div>
+    <div id="secondLastRecord" style="font-size: 14px;">2. (等待記錄...)</div>
+</div>
 
 </body>
 </html>
