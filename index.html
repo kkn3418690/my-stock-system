@@ -763,7 +763,9 @@ function showSyncError() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `補貨總表_${new Date().toLocaleDateString()}.csv`);
+    const today = new Date().toISOString().split('T')[0];
+
+    link.setAttribute("download",`補貨總表_${today}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -895,30 +897,41 @@ function showSyncError() {
     // 修改分組後的數量 (已修正邏輯，確保店家資訊不遺失)
     function changeGroupQty(key, newQty) {
     const [shopName, name, isReturnStr] = key.split('|');
-
-    // 找出該筆紀錄原本屬於哪家店
     const isReturn = isReturnStr === 'true';
     const val = parseInt(newQty, 10);
     if (isNaN(val) || val < 0) return;
-        
-    // 1. 移除該店家、該品項的所有舊紀錄
-    records = records.filter(
-        r => !(
+
+    // 找出原本資料
+    const oldRecords = records.filter(
+        r =>
             r.shop === shopName &&
             r.name === name &&
             String(r.isReturn) === isReturnStr
-        )
     );
 
-    // 2. 寫入一筆更新後的新紀錄
+    if (oldRecords.length === 0) return;
+    const firstRecord = oldRecords[0];
+
+    // 刪除舊資料
+    records = records.filter(
+        r =>
+            !(
+                r.shop === shopName &&
+                r.name === name &&
+                String(r.isReturn) === isReturnStr
+            )
+    );
+
+    // 保留備註
     records.push({
         id: crypto.randomUUID(),
         shop: shopName,
         name: name,
         qty: val,
         isReturn: isReturn,
-        color: name.match(/\[(.*?)\]/)?.[1] || '',
-        baseName: name.replace(/\[.*?\]\s/, '')
+        color: firstRecord.color,
+        baseName: firstRecord.baseName,
+        note: firstRecord.note || ''
     });
 
     saveAll();
