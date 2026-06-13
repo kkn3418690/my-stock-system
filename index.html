@@ -701,13 +701,18 @@ function showSyncError() {
         if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
         records.push({ id: crypto.randomUUID(), shop: shopName, name: productName, baseName: baseProdName, color: currentColor, qty: qty, isReturn: typeReturn, note: note });
         saveAll();
-        itemQty.value = 1; isReturn.checked = false; noteInput.value = ""; updateUI();
-        // 貼在 addBtn 的點擊事件函數內，最後一行
+        const recordText = `${shopName} | ${productName} x ${qty} ${typeReturn ? '(退)' : ''}`;
+
+        itemQty.value = 1;
+        isReturn.checked = false;
+        noteInput.value = "";
+        updateUI();
+
         const last = document.getElementById('lastRecord');
         const second = document.getElementById('secondLastRecord');
-        const newText = `${shopSelect.value} | ${productSelect.value} x ${itemQty.value} ${isReturn.checked ? '(退)' : ''}`;
+
         second.textContent = `2. ${last.textContent.replace('1. ', '')}`;
-        last.textContent = `1. ${newText}`;
+        last.textContent = `1. ${recordText}`;
     });
     function changeItemQty(id, newQty) {
         const val = parseInt(newQty, 10); if (isNaN(val) || val < 0) return;
