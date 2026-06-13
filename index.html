@@ -699,7 +699,6 @@ function showSyncError() {
         const qty = parseInt(itemQty.value, 10); const typeReturn = isReturn.checked; const note = noteInput.value.trim();
         if (!shopName) { alert('請先選擇店家！'); return; }
         if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
-        const recordId = crypto.randomUUID();
         records.push({ id: crypto.randomUUID(), shop: shopName, name: productName, baseName: baseProdName, color: currentColor, qty: qty, isReturn: typeReturn, note: note });
         saveAll();
         itemQty.value = 1; isReturn.checked = false; noteInput.value = ""; updateUI();
@@ -847,7 +846,7 @@ function showSyncError() {
         
         const groupedItems = {};
         items.forEach(item => {
-            const key = `${item.name}-${item.isReturn}`;
+            const key = `${shop}|${item.name}|${item.isReturn}`;
             if (!groupedItems[key]) { groupedItems[key] = { ...item, notes: item.note ? [item.note] : [] }; }
             else { groupedItems[key].qty += item.qty; if (item.note) groupedItems[key].notes.push(item.note); }
         });
@@ -856,6 +855,7 @@ function showSyncError() {
 
         sortedKeys.forEach(key => {
             const item = groupedItems[key];
+            const [shopName, itemName, isReturnStr] = key.split('|');
             const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
             const noteText = item.notes.length > 0 ? `<br><span class="note-text">📝 備註: ${item.notes.join("；")}</span>` : '';
             const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
@@ -888,42 +888,52 @@ function showSyncError() {
     loadSystem();
     
     // 修改分組後的數量 (已修正邏輯，確保店家資訊不遺失)
-function changeGroupQty(key, newQty) {
-    const [name, isReturnStr] = key.split('-');
+    function changeGroupQty(key, newQty) {
+    const [shopName, name, isReturnStr] = key.split('|');
+
+    // 找出該筆紀錄原本屬於哪家店
     const isReturn = isReturnStr === 'true';
     const val = parseInt(newQty, 10);
-    
-    // 找出該筆紀錄原本屬於哪家店
-    const targetRecord = records.find(r => r.name === name && String(r.isReturn) === isReturnStr);
-    if (!targetRecord) return;
-    const shopName = targetRecord.shop;
-    
+    if (isNaN(val) || val < 0) return;
+        
     // 1. 移除該店家、該品項的所有舊紀錄
-    records = records.filter(r => !(r.name === name && String(r.isReturn) === isReturnStr && r.shop === shopName));
-    
+    records = records.filter(
+        r => !(
+            r.shop === shopName &&
+            r.name === name &&
+            String(r.isReturn) === isReturnStr
+        )
+    );
+
     // 2. 寫入一筆更新後的新紀錄
-    records.push({ 
-        id: Date.now() + Math.random(), 
-        shop: shopName, 
-        name: name, 
-        qty: val, 
-        isReturn: isReturn, 
-        baseName: name.replace(/\[.*?\]\s/, '') 
+    records.push({
+        id: crypto.randomUUID(),
+        shop: shopName,
+        name: name,
+        qty: val,
+        isReturn: isReturn,
+        color: name.match(/\[(.*?)\]/)?.[1] || '',
+        baseName: name.replace(/\[.*?\]\s/, '')
     });
-    
+
     saveAll();
     updateUI();
 }
 
 // 刪除該組所有紀錄
 function deleteGroup(key) {
-    if(confirm('確定要刪除此品項的所有紀錄嗎？')) {
-        const [name, isReturnStr] = key.split('-');
-        // 移除該店家該品項的所有紀錄
-        records = records.filter(r => !(r.name === name && String(r.isReturn) === isReturnStr));
-        saveAll();
-        updateUI();
-    }
+    if (!confirm('確定刪除嗎？')) return;
+    const [shopName, name, isReturnStr] = key.split('|');
+    records = records.filter(
+        r => !(
+            r.shop === shopName &&
+            r.name === name &&
+            String(r.isReturn) === isReturnStr
+        )
+    );
+
+    saveAll();
+    updateUI();
 }
 
 </script>
