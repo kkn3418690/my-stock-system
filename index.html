@@ -797,8 +797,8 @@ function showSyncError() {
 
     // --- 2. 渲染全店總備貨加總區塊 (條碼優先排序) ---
     let summaryHtml = '<div style="display: flex; flex-direction: column; gap: 12px;">';
-    const colorBgMap = { '紫': '#f3e5f5', '紅': '#ffebee', '黑': '#e0e0e0', '白': '#ffffff' };
-    const colorTextMap = { '紫': '#7b1fa2', '紅': '#c62828', '黑': '#000000', '白': '#555555' };
+    const colorBgMap = { '紫': '#d1a3e8', '紅': '#ff8a8a', '黑': '#9e9e9e', '白': '#ffffff' };
+    const colorTextMap = { '紫': '#4a148c', '紅': '#8b0000', '黑': '#000000', '白': '#333333' };
 
     // 依據後台設定的「條碼類別」分類顯示
     for (const [bType, items] of Object.entries(summaryByBarcode)) {
