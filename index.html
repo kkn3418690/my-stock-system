@@ -329,6 +329,32 @@
 
 <script>
     // [此處 JS 代碼與原版一致，保持功能連動性]
+    document.getElementById('addBtn').addEventListener('click', () => {
+    // ... 原有的邏輯 (取得變數、驗證) ...
+    if (!shopName) { alert('請先選擇店家！'); return; }
+    if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
+
+    // --- 新增：觸覺回饋與視覺回饋 ---
+    // 1. 觸覺震動 (手機會震動 200ms)
+    if (navigator.vibrate) {
+        navigator.vibrate(200);
+    }
+
+    // 2. 視覺回饋：讓按鈕瞬間變色或縮小，增加點擊感
+    const btn = document.getElementById('addBtn');
+    btn.style.transform = "scale(0.90)";
+    btn.style.backgroundColor = "#c2185b"; // 深一點的顏色
+    setTimeout(() => {
+        btn.style.transform = "scale(1)";
+        btn.style.backgroundColor = "#E91E63";
+    }, 150);
+    // ----------------------------
+
+    records.push({ /* ... 原有的紀錄物件 ... */ });
+    saveAll();
+    // ... 後續 UI 更新邏輯 ...
+});
+
         // 修改後的 showSyncError
 function showSyncError() {
     if (document.getElementById('syncToast')) return; 
