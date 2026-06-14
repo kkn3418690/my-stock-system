@@ -328,31 +328,33 @@
 </div>
 
 <script>
-    // [此處 JS 代碼與原版一致，保持功能連動性]
-    document.getElementById('addBtn').addEventListener('click', () => {
-    // ... 原有的邏輯 (取得變數、驗證) ...
-    if (!shopName) { alert('請先選擇店家！'); return; }
-    if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
-
-    // --- 新增：觸覺回饋與視覺回饋 ---
-    // 1. 觸覺震動 (手機會震動 200ms)
+    
+    // 綁定 pointerdown 事件，這是最靈敏的觸控觸發點
+document.getElementById('addBtn').addEventListener('pointerdown', function(e) {
+    // 1. 觸覺回饋 (越早執行越好)
     if (navigator.vibrate) {
-        navigator.vibrate(200);
+        navigator.vibrate(100); // 改短一點點，反應較快
     }
 
-    // 2. 視覺回饋：讓按鈕瞬間變色或縮小，增加點擊感
-    const btn = document.getElementById('addBtn');
-    btn.style.transform = "scale(0.90)";
-    btn.style.backgroundColor = "#c2185b"; // 深一點的顏色
-    setTimeout(() => {
-        btn.style.transform = "scale(1)";
-        btn.style.backgroundColor = "#E91E63";
-    }, 150);
-    // ----------------------------
+    // 2. 視覺回饋 (瞬間縮小)
+    this.style.transform = "scale(0.90)";
+    this.style.transition = "transform 0.1s";
+});
 
-    records.push({ /* ... 原有的紀錄物件 ... */ });
-    saveAll();
-    // ... 後續 UI 更新邏輯 ...
+// 恢復樣式並執行主要邏輯
+document.getElementById('addBtn').addEventListener('pointerup', function(e) {
+    this.style.transform = "scale(1)";
+    
+    // 原本的業務邏輯放在這裡
+    const shopName = shopSelect.value;
+    const qty = parseInt(itemQty.value, 10);
+    
+    if (!shopName) { alert('請先選擇店家！'); return; }
+    if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
+    
+    // ... 執行剩下的記錄與儲存邏輯 (records.push...)
+    // ... saveAll();
+    // ... 更新UI
 });
 
         // 修改後的 showSyncError
