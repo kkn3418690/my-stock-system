@@ -162,6 +162,14 @@
         <button class="tab-btn" id="btn-setting-tab">⚙️ 後台設定</button>
     </div>
 
+    <div id="syncStatus"
+        style="font-size:12px;
+            text-align:center;
+            color:#666;
+            margin-bottom:8px;">
+        尚未同步
+    </div>
+    
     <div id="work-tab" class="tab-content active">
         <h1>🏪 竣泰企業社智慧備貨與資料管理系統</h1>
         
@@ -359,15 +367,28 @@ function showSyncError() {
     let baseShops = [];
     let shopDatabase = {}; 
     let currentColor = '紫';
-    let records = []; 
+    let records = [];
+    function safeSave(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch (e) {
+        alert("⚠️ 本機儲存空間不足！");
+        console.error(e);
+    }
+}
 
+    const now = new Date().toLocaleString();
+    safeSave('erp_last_sync_time',now);
+    const syncEl =document.getElementById('syncStatus');
+    if(syncEl){syncEl.innerHTML ="☁️ 最後儲存：" + now;}
+    
         // 統一同步函式
     function saveAll() {
         // 1. 同步到本地儲存
-        localStorage.setItem('erp_records', JSON.stringify(records));
-        localStorage.setItem('erp_config_products_v7', productsTextarea.value);
-        localStorage.setItem('erp_config_shops_v7', shopsTextarea.value);
-        localStorage.setItem('erp_shop_database_v7', JSON.stringify(shopDatabase));
+        safeSave('erp_records', JSON.stringify(records));
+        safeSave('erp_config_products_v7', productsTextarea.value);
+        safeSave('erp_config_shops_v7', shopsTextarea.value);
+        safeSave('erp_shop_database_v7', JSON.stringify(shopDatabase));
         
         // 2. 推送到 Google 雲端
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
@@ -475,7 +496,12 @@ function showSyncError() {
     
     function loadSystem() {
     buildBillingDateOptions();
-    
+    const lastTime =localStorage.getItem('erp_last_sync_time');
+
+        if(lastTime){
+            const syncEl =document.getElementById('syncStatus');
+            if(syncEl){syncEl.innerHTML ="☁️ 最後儲存：" + lastTime;}
+}
     const finalizeInit = () => {
         buildShopSelect();
         renderProductSelect();
@@ -730,7 +756,11 @@ function showSyncError() {
     shopList.forEach(shop => {
         const shopRecords = records.filter(r => r.shop === shop);
         // 取得該店所有出現的品項
-        const productList = [...new Set(shopRecords.map(r => r.baseName))].sort();
+        const productList =[...new Set(shopRecords.map(r => r.baseName))].sort((a,b)=>{
+    
+            return baseProducts.indexOf(a)
+                - baseProducts.indexOf(b);
+});
         
         csvContent += `🏪 店家：${shop}\n`;
         csvContent += `品名,${colors.join(",")},備註\n`;
@@ -912,6 +942,11 @@ function showSyncError() {
     if (oldRecords.length === 0) return;
     const firstRecord = oldRecords[0];
 
+    const allNotes = oldRecords
+    .map(r => r.note)
+    .filter(n => n && n.trim() !== '')
+    .join('；');
+
     // 刪除舊資料
     records = records.filter(
         r =>
@@ -931,7 +966,7 @@ function showSyncError() {
         isReturn: isReturn,
         color: firstRecord.color,
         baseName: firstRecord.baseName,
-        note: firstRecord.note || ''
+        note: allNotes
     });
 
     saveAll();
