@@ -150,6 +150,9 @@
             z-index: 9999; box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
             display: block; 
         }
+        
+        /* 在 <style> 中加入以下隱藏類別 */
+        .feature-disabled { display: none !important; }
 
     </style>
 </head>
@@ -259,7 +262,7 @@
             <div id="adminMainArea" style="display: none;">
                 <div class="admin-meta-grid">
                     
-                    <div class="admin-select-group">
+                    <div class="admin-select-group" style="display:none;">
                         <label>📄 發票規範</label>
                         <div class="row-flex">
                             <select id="selectInvoice">
@@ -284,7 +287,7 @@
                         </div>
                     </div>
 
-                    <div class="admin-select-group">
+                    <div class="admin-select-group" style="display:none;">
                         <label>📅 月結日</label>
                         <select id="selectBillingDate"></select>
                     </div>
@@ -328,7 +331,7 @@
 </div>
 
 <script>
-    
+
     // 綁定 pointerdown 事件，這是最靈敏的觸控觸發點
 document.getElementById('addBtn').addEventListener('pointerdown', function(e) {
     // 1. 觸覺回饋 (越早執行越好)
@@ -723,7 +726,7 @@ function showSyncError() {
     const shopInfo = shopDatabase[shopName];
     
     if (shopInfo) { 
-        infoDetails.innerHTML = `📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; 
+        infoDetails.innerHTML = `🏷️ <b>條碼：</b>${shopInfo.barcode}`; //📌 <b>發票：</b>${shopInfo.invoice} |  | 📅 <b>結帳：</b>${shopInfo.billingDate}
     } else { 
         infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; 
     }
@@ -963,7 +966,7 @@ function showSyncError() {
     let historyHtml = '<div>';
     for (const [shop, items] of Object.entries(shopGroups)) {
         const info = shopDatabase[shop];
-        const metaStr = info ? `📄 發票: ${info.invoice} | 🏷️ 條碼: ${info.barcode} | 📅 結帳: ${info.billingDate}` : '';
+        const metaStr = info ? `🏷️ 條碼: ${info.barcode}` : '';//📄 發票: ${info.invoice} |  | 📅 結帳: ${info.billingDate}
         historyHtml += `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div><div class="shop-meta">${metaStr}</div>`;
         
         const groupedItems = {};
