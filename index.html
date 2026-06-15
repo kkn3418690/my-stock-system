@@ -648,23 +648,33 @@ function showSyncError() {
     }
     [inputInvoiceCustom, inputBarcodeCustom, inputColorP, inputColorR, inputColorB, inputColorW].forEach(el => { el.addEventListener('input', syncLiveInputToMemory); });
     document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-        syncLiveInputToMemory();
-        const cleanedDatabase = {};
-        baseShops.forEach(shop => {
-            if(shopDatabase[shop]) {
-                cleanedDatabase[shop] = shopDatabase[shop];
-                if(!cleanedDatabase[shop].suggestQty) cleanedDatabase[shop].suggestQty = {};
-                const cleanedQty = {};
-                baseProducts.forEach(p => { cleanedQty[p] = shopDatabase[shop].suggestQty[p] || { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; });
-                cleanedDatabase[shop].suggestQty = cleanedQty;
-            } else { cleanedDatabase[shop] = { invoice: "免開發票", barcode: "不需要條碼", billingDate: "25號結", suggestQty: {} }; }
+    syncLiveInputToMemory();
+    const cleanedDatabase = {};
+    
+    baseShops.forEach(shop => {
+        // 檢查如果原本資料庫已有這家店的設定，就保留它，沒有的話給預設值
+        const existingData = shopDatabase[shop] || {}; 
+        
+        cleanedDatabase[shop] = {
+            // 這裡就是關鍵：就算介面隱藏，也要抓取舊有的發票與月結日，確保不遺失
+            invoice: existingData.invoice || "免開發票",
+            barcode: existingData.barcode || "不需要條碼",
+            billingDate: existingData.billingDate || "25號結",
+            
+            // 處理商品備貨量
+            suggestQty: existingData.suggestQty || {}
+        };
+        
+        // 確保商品層級的設定也正確 (這段維持您原本的邏輯即可)
+        baseProducts.forEach(p => { 
+            cleanedDatabase[shop].suggestQty[p] = cleanedDatabase[shop].suggestQty[p] || { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; 
         });
-        shopDatabase = cleanedDatabase;
-        saveAll(); // 這一行就夠了，因為它會自動抓取當前畫面的所有資料進行存檔
-        buildShopSelect(); renderProductSelect();
-        alert('💾 後台所有設定（合約下拉與四色）已安全同步存檔！');
-        switchTab('work-tab', btnWorkTab);
     });
+    
+    shopDatabase = cleanedDatabase;
+    saveAll(); // 執行同步
+    alert('💾 設定已安全同步！');
+});
 
     function buildShopSelect() {
         const lastSelected = shopSelect.value;
@@ -680,7 +690,8 @@ function showSyncError() {
     }
     function onShopChange() {
         const shopName = shopSelect.value; const shopInfo = shopDatabase[shopName];
-        if (shopInfo) { infoDetails.innerHTML = `🏷️ <b>條碼規範：</b>${shopInfo.barcode}`; //`📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; } else { infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; }
+        if (shopInfo) { infoDetails.innerHTML = `🏷️ <b>條碼規範：</b>${shopInfo.barcode}`;  //`📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; 
+        } else { infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; }
         updateSuggestTip();
     }
     function getSuggestNum(shopName, baseProdName, color) {
