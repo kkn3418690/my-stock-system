@@ -719,24 +719,32 @@ function showSyncError() {
         updateSuggestTip();
     }
     function onShopChange() {
-        const shopName = shopSelect.value; const shopInfo = shopDatabase[shopName];
-        if (shopInfo) { infoDetails.innerHTML = `📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; } else { infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; }
-        updateSuggestTip();
-    }
-    function getSuggestNum(shopName, baseProdName, color) {
-    // 使用 window.shopDatabase 確保明確指向全域變數
-    const shopInfo = window.shopDatabase[shopName];
-
-    // 檢查 shopInfo 是否存在，以及是否擁有該商品的建議量結構
-    if (shopInfo && shopInfo.suggestQty && shopInfo.suggestQty[baseProdName]) {
-        const colorMap = shopInfo.suggestQty[baseProdName];
-        // 如果該顏色數值存在且有效，則回傳，否則回傳預設 5
-        const value = colorMap[color];
-        return (value !== undefined && value !== null) ? parseInt(value) : 5;
+    const shopName = shopSelect.value; 
+    const shopInfo = shopDatabase[shopName];
+    
+    if (shopInfo) { 
+        infoDetails.innerHTML = `📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; 
+    } else { 
+        infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; 
     }
     
-    // 如果找不到該店家或該商品設定，預設回傳 5
-    return 5; 
+    // 【重要】確保每次切換店家後，重新整理產品建議量
+    updateSuggestTip(); 
+}
+
+    function getSuggestNum(shopName, baseProdName, color) {
+    // 改用 window.shopDatabase 以確保讀取全域變數
+    const db = window.shopDatabase || {}; 
+    const shopInfo = db[shopName];
+
+    // 如果找不到店家設定，直接回傳預設值，避免報錯
+    if (!shopInfo || !shopInfo.suggestQty || !shopInfo.suggestQty[baseProdName]) {
+        return 5; 
+    }
+    
+    const colorMap = shopInfo.suggestQty[baseProdName];
+    const value = colorMap[color];
+    return (value !== undefined && value !== null) ? parseInt(value, 10) : 5;
 }
 
     function updateSuggestTip() {
