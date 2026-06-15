@@ -414,38 +414,37 @@ function showSyncError() {
     const syncEl =document.getElementById('syncStatus');
     if(syncEl){syncEl.innerHTML ="☁️ 最後儲存：" + now;}
     
-        // 統一同步函式
-    function saveAll() {
-        // 1. 同步到本地儲存
-        safeSave('erp_records', JSON.stringify(records));
-        safeSave('erp_config_products_v7', productsTextarea.value);
-        safeSave('erp_config_shops_v7', shopsTextarea.value);
-        safeSave('erp_shop_database_v7', JSON.stringify(shopDatabase));
-        
-        // 2. 推送到 Google 雲端
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
-        
-        const payload = {
-            records: records,
-            config: {
-                products: productsTextarea.value,
-                shops: shopsTextarea.value,
-                database: shopDatabase
-            }
-        };
-        
-        fetch(SCRIPT_URL, {
+    // 統一同步函式
+    async function saveAll() {
+    // 1. 先存本地
+    safeSave('erp_records', JSON.stringify(records));
+    safeSave('erp_config_products_v7', productsTextarea.value);
+    safeSave('erp_config_shops_v7', shopsTextarea.value);
+    safeSave('erp_shop_database_v7', JSON.stringify(shopDatabase));
+    
+    // 2. 推送到 Google 雲端
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
+    const payload = { records, config: { products: productsTextarea.value, shops: shopsTextarea.value, database: shopDatabase } };
+    
+    try {
+        const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
-            headers: { "Content-Type": "text/plain" },
+            mode: 'no-cors', // 若測試時發生 CORS 錯誤，請確保 GAS 部署權限為「所有人」
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
-        })
-        .then(() => console.log("雲端同步成功"))
-        .catch(err => {
-            console.error("雲端同步失敗", err);
-            showSyncError(); // 當雲端失敗時，呼叫我們剛加入的錯誤提醒
         });
+        const now = new Date().toLocaleString();
+        safeSave('erp_last_sync_time', now);
+        document.getElementById('syncStatus').innerHTML = "✅ 同步成功：" + now;
+        return true; // 表示成功
+    } catch (err) {
+        console.error("雲端同步失敗", err);
+        document.getElementById('syncStatus').innerHTML = "❌ 同步失敗";
+        showSyncError(); 
+        throw err; // 拋出錯誤，讓呼叫此函式的按鈕知道失敗了
     }
+}
+
 
     const btnWorkTab = document.getElementById('btn-work-tab');
     const btnSettingTab = document.getElementById('btn-setting-tab');
@@ -649,24 +648,42 @@ function showSyncError() {
         }
     }
     [inputInvoiceCustom, inputBarcodeCustom, inputColorP, inputColorR, inputColorB, inputColorW].forEach(el => { el.addEventListener('input', syncLiveInputToMemory); });
-    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-        syncLiveInputToMemory();
-        const cleanedDatabase = {};
-        baseShops.forEach(shop => {
-            if(shopDatabase[shop]) {
-                cleanedDatabase[shop] = shopDatabase[shop];
-                if(!cleanedDatabase[shop].suggestQty) cleanedDatabase[shop].suggestQty = {};
-                const cleanedQty = {};
-                baseProducts.forEach(p => { cleanedQty[p] = shopDatabase[shop].suggestQty[p] || { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; });
-                cleanedDatabase[shop].suggestQty = cleanedQty;
-            } else { cleanedDatabase[shop] = { invoice: "免開發票", barcode: "不需要條碼", billingDate: "25號結", suggestQty: {} }; }
-        });
-        shopDatabase = cleanedDatabase;
-        saveAll(); // 這一行就夠了，因為它會自動抓取當前畫面的所有資料進行存檔
-        buildShopSelect(); renderProductSelect();
-        alert('💾 後台所有設定（合約下拉與四色）已安全同步存檔！');
-        switchTab('work-tab', btnWorkTab);
+    document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('saveSettingsBtn');
+    
+    // 1. 開始處理，先鎖定按鈕防止重複點擊
+    btn.disabled = true;
+    btn.textContent = "💾 同步中...";
+    
+    // 2. 將介面資料抓取到記憶體 (這是您原本就有的邏輯)
+    syncLiveInputToMemory();
+    const cleanedDatabase = {};
+    baseShops.forEach(shop => {
+        if (shopDatabase[shop]) {
+            cleanedDatabase[shop] = shopDatabase[shop];
+        }
     });
+    shopDatabase = cleanedDatabase;
+    
+    // 3. 嘗試執行同步
+    try {
+        await saveAll(); // 強制等待 saveAll 完成 (必須確保 saveAll 內有使用 await)
+        
+        // 4. 同步成功後才執行後續介面更新
+        buildShopSelect(); 
+        renderProductSelect();
+        alert('💾 後台所有設定已安全同步至雲端！');
+        switchTab('work-tab', btnWorkTab);
+        
+    } catch (err) {
+        // 5. 如果同步失敗，顯示錯誤且不跳轉頁面
+        alert('❌ 同步失敗！請檢查網路或確認部署權限。');
+    } finally {
+        // 6. 不管成功或失敗，最後都要恢復按鈕狀態
+        btn.disabled = false;
+        btn.textContent = "💾 確定保存所有後台設定變更";
+    }
+});
 
     function buildShopSelect() {
         const lastSelected = shopSelect.value;
