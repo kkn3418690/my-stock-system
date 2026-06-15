@@ -688,7 +688,7 @@ function showSyncError() {
         
     } catch (err) {
         // 5. 如果同步失敗，顯示錯誤且不跳轉頁面
-        alert('❌ 同步失敗！請檢查網路或確認部署權限。');
+        alert('❌ 同步失敗！請檢查網路。');
     } finally {
         // 6. 不管成功或失敗，最後都要恢復按鈕狀態
         btn.disabled = false;
@@ -714,14 +714,21 @@ function showSyncError() {
         updateSuggestTip();
     }
     function getSuggestNum(shopName, baseProdName, color) {
-        const shopInfo = shopDatabase[shopName];
-        if (shopInfo && shopInfo.suggestQty && shopInfo.suggestQty[baseProdName]) {
-            const colorMap = shopInfo.suggestQty[baseProdName];
-            return colorMap[color] !== undefined ? colorMap[color] : 3;
-        }
-        return 3;
+    // 使用 window.shopDatabase 確保明確指向全域變數
+    const shopInfo = window.shopDatabase[shopName];
+
+    // 檢查 shopInfo 是否存在，以及是否擁有該商品的建議量結構
+    if (shopInfo && shopInfo.suggestQty && shopInfo.suggestQty[baseProdName]) {
+        const colorMap = shopInfo.suggestQty[baseProdName];
+        // 如果該顏色數值存在且有效，則回傳，否則回傳預設 5
+        const value = colorMap[color];
+        return (value !== undefined && value !== null) ? parseInt(value) : 5;
     }
     
+    // 如果找不到該店家或該商品設定，預設回傳 5
+    return 5; 
+}
+
     function updateSuggestTip() {
     const shopName = shopSelect.value; 
     const selectedOpt = productSelect.options[productSelect.selectedIndex];
@@ -950,17 +957,33 @@ function showSyncError() {
 
         const sortedKeys = Object.keys(groupedItems).sort((a, b) => baseProducts.indexOf(groupedItems[a].baseName) - baseProducts.indexOf(groupedItems[b].baseName));
 
+                // 修正後的迴圈區塊
         sortedKeys.forEach(key => {
             const item = groupedItems[key];
             const [shopName, itemName, isReturnStr] = key.split('|');
             const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
             const noteText = item.notes.length > 0 ? `<br><span class="note-text">📝 備註: ${item.notes.join("；")}</span>` : '';
+            
+            // --- 修改重點在這裡 ---
+            // 確保這裡是傳入正確的 shop (店家名稱)
             const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
+            
             historyHtml += `<div class="history-item">
-                <div class="history-info"><div><span>${item.name} ${returnTag}</span></div><div><span class="history-suggest-tag">建議上限: ${suggestNum}</span></div>${noteText}</div>
-                <div class="history-actions"><input type="number" class="inline-qty-input" value="${item.qty}" onchange="changeGroupQty('${key}', this.value)"><button class="btn btn-danger" onclick="deleteGroup('${key}')" style="padding: 5px 8px;">❌</button></div>
+                <div class="history-info">
+                    <div><span>${item.name} ${returnTag}</span></div>
+                    <div>
+                        <!-- 這裡會因為每次重繪而抓到最新的 suggestNum -->
+                        <span class="history-suggest-tag">建議上限: ${suggestNum}</span>
+                    </div>
+                </div>
+                ${noteText}
+                <div class="history-actions">
+                    <input type="number" class="inline-qty-input" value="${item.qty}" onchange="changeGroupQty('${key}', this.value)">
+                    <button class="btn btn-danger" onclick="deleteGroup('${key}')" style="padding: 5px 8px;">❌</button>
+                </div>
             </div>`;
         });
+
         historyHtml += `</div>`;
     }
     historyList.innerHTML = historyHtml + '</div>';
