@@ -150,6 +150,8 @@
             z-index: 9999; box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
             display: block; 
         }
+        /* 在 <style> 中加入以下隱藏類別 */
+        .feature-disabled { display: none !important; }
 
     </style>
 </head>
@@ -259,7 +261,7 @@
             <div id="adminMainArea" style="display: none;">
                 <div class="admin-meta-grid">
                     
-                    <div class="admin-select-group">
+                    <div class="admin-select-group" style="display:none;">
                         <label>📄 發票規範</label>
                         <div class="row-flex">
                             <select id="selectInvoice">
@@ -284,7 +286,7 @@
                         </div>
                     </div>
 
-                    <div class="admin-select-group">
+                    <div class="admin-select-group" style="display:none;">
                         <label>📅 月結日</label>
                         <select id="selectBillingDate"></select>
                     </div>
@@ -678,16 +680,16 @@ function showSyncError() {
     }
     function onShopChange() {
         const shopName = shopSelect.value; const shopInfo = shopDatabase[shopName];
-        if (shopInfo) { infoDetails.innerHTML = `📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; } else { infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; }
+        if (shopInfo) { infoDetails.innerHTML = `🏷️ <b>條碼規範：</b>${shopInfo.barcode}`; //`📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; } else { infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; }
         updateSuggestTip();
     }
     function getSuggestNum(shopName, baseProdName, color) {
         const shopInfo = shopDatabase[shopName];
         if (shopInfo && shopInfo.suggestQty && shopInfo.suggestQty[baseProdName]) {
             const colorMap = shopInfo.suggestQty[baseProdName];
-            return colorMap[color] !== undefined ? colorMap[color] : 3;
+            return colorMap[color] !== undefined ? colorMap[color] : 5;
         }
-        return 3;
+        return 5;
     }
     
     function updateSuggestTip() {
