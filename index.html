@@ -785,21 +785,50 @@ function showSyncError() {
     }
 
     // --- 將 saveTempLimit 獨立出來放在外面 ---
-    function saveTempLimit() {
-        const shopName = shopSelect.value;
-        const selectedOpt = productSelect.options[productSelect.selectedIndex];
-        const baseName = selectedOpt.getAttribute('data-base-name');
-        const newLimit = parseInt(document.getElementById('tempLimitInput').value, 10);
-        
-        if (shopName && baseName && !isNaN(newLimit)) {
-            if(!shopDatabase[shopName].suggestQty[baseName]) shopDatabase[shopName].suggestQty[baseName] = {};
-            shopDatabase[shopName].suggestQty[baseName][currentColor] = newLimit;
+    async function saveTempLimit() {
+    const shopName = shopSelect.value;
+    const selectedOpt = productSelect.options[productSelect.selectedIndex];
+    
+    // 1. 防呆檢查
+    if (!shopName || !selectedOpt) {
+        alert('請先選擇店家與商品');
+        return;
+    }
+
+    const baseName = selectedOpt.getAttribute('data-base-name');
+    const newLimit = parseInt(document.getElementById('tempLimitInput').value, 10);
+    const btn = event.target; // 取得當前點擊的按鈕
+
+    if (shopName && baseName && !isNaN(newLimit)) {
+        // 2. 更新記憶體資料
+        if (!shopDatabase[shopName].suggestQty[baseName]) {
+            shopDatabase[shopName].suggestQty[baseName] = {};
+        }
+        shopDatabase[shopName].suggestQty[baseName][currentColor] = newLimit;
+
+        // 3. 顯示執行中狀態
+        const originalText = btn.textContent;
+        btn.textContent = "儲存中...";
+        btn.disabled = true;
+
+        try {
+            // 4. 強制執行一次 saveAll()
+            await saveAll();
             
-            saveAll(); // 自動存檔同步到雲端
-            updateSuggestTip(); // 重新整理畫面
-            alert('💾 已更新該店該品項的備貨上限！');
+            // 5. 更新成功，重新整理畫面
+            updateSuggestTip();
+            console.log("建議量已同步至雲端");
+            alert('✅ 該店該品項的備貨上限已成功同步！');
+        } catch (err) {
+            alert('❌ 同步失敗，請確認網路狀態。');
+        } finally {
+            // 6. 恢復按鈕
+            btn.textContent = originalText;
+            btn.disabled = false;
         }
     }
+}
+
 
     function adjustQty(amount) {
         let val = parseInt(itemQty.value, 10) || 1;
