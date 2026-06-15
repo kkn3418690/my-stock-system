@@ -429,10 +429,12 @@ function showSyncError() {
     try {
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // 若測試時發生 CORS 錯誤，請確保 GAS 部署權限為「所有人」
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
+        // 解析後端傳回來的資料
+        const result = await response.json();
+        
         const now = new Date().toLocaleString();
         safeSave('erp_last_sync_time', now);
         document.getElementById('syncStatus').innerHTML = "✅ 同步成功：" + now;
