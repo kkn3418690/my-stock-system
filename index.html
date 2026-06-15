@@ -400,6 +400,7 @@ function showSyncError() {
     let shopDatabase = {}; 
     let currentColor = '紫';
     let records = [];
+    let isSyncing = false;
     function safeSave(key, value) {
     try {
         localStorage.setItem(key, value);
@@ -416,6 +417,14 @@ function showSyncError() {
     
     // 統一同步函式
     async function saveAll() {
+    // 如果正在同步中，直接退出，避免重複發送請求
+    if (isSyncing) {
+        console.log("⚠️ 目前正在同步中，跳過本次請求...");
+        return; 
+    }
+    
+    isSyncing = true; // 進入函式，開始鎖定
+    
     // 1. 先存本地
     safeSave('erp_records', JSON.stringify(records));
     safeSave('erp_config_products_v7', productsTextarea.value);
@@ -437,15 +446,16 @@ function showSyncError() {
         const now = new Date().toLocaleString();
         safeSave('erp_last_sync_time', now);
         document.getElementById('syncStatus').innerHTML = "✅ 同步成功：" + now;
-        return true; // 表示成功
+        return true; 
     } catch (err) {
         console.error("雲端同步失敗", err);
         document.getElementById('syncStatus').innerHTML = "❌ 同步失敗";
         showSyncError(); 
-        throw err; // 拋出錯誤，讓呼叫此函式的按鈕知道失敗了
+        throw err; 
+    } finally {
+        isSyncing = false; // 無論成功或失敗，最後都要解鎖，讓下次可以繼續同步
     }
 }
-
 
     const btnWorkTab = document.getElementById('btn-work-tab');
     const btnSettingTab = document.getElementById('btn-setting-tab');
@@ -1071,6 +1081,36 @@ function deleteGroup(key) {
     saveAll();
     updateUI();
 }
+    // --- 10秒自動同步機制 (含變動偵測) ---
+let lastSavedData = ""; // 用來比對內容是否變動
+
+setInterval(async () => {
+    // 組合當前的狀態進行比對，確保只有資料真的有變動時才呼叫 API
+    const currentData = JSON.stringify({
+        records: records,
+        configProducts: productsTextarea.value,
+        configShops: shopsTextarea.value,
+        database: shopDatabase
+    });
+
+    // 只有資料變動時，才執行 saveAll()，節省雲端請求次數
+    if (currentData !== lastSavedData) {
+        console.log("⏰ 偵測到資料變動，執行自動同步...");
+        try {
+            await saveAll(); // 呼叫你已經寫好的儲存函式
+            lastSavedData = currentData; // 更新快照
+        } catch (err) {
+            console.error("❌ 自動同步失敗", err);
+        }
+    }
+}, 10000); // 10000 毫秒 = 10 秒
+
+// --- 頁面關閉時的最後保障 ---
+window.addEventListener('beforeunload', async () => {
+    console.log("頁面關閉中，進行最後同步...");
+    await saveAll();
+});
+
 
 </script>
 
