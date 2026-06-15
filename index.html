@@ -387,13 +387,13 @@ function showSyncError() {
     ];
     
     const defaultShops = [
-        ​"1-49海佃店", "2-49龍潭店", "3-49長和店", "4-49國光店", "5-49永明店", "6-49裕信店", "7-49培安店", "8-49西勢店", "9-49仁德店", "10-49路竹店", 
-        "11-上尚大灣店", "12-上尚歸仁店", "13-上新崇善店", "14-全暘新化店", "15-兆竣新化店", "16-全峰新市店", "17-洁沅善化店", "18-全國東門店", "19-大北海佃店", "20-大北和瑋店", 
-        "21-正一忠孝店", "22-正一平等店", "23-安加安定店", "24-豪億莊敬店", "25-豪億民雄店", "26-豪億水上店", "27-大豪虎尾店", "28-大利多民雄店", "29-大利多台林店", "30-大利多興中店", 
-        "31-大利多三民店", "32-來又來水上店", "33-上勝嘉義店", "34-上勝太保店", "35-億久久中正店", "36-欣億達阿蓮店", "37-駿旺莒光店", "38-駿旺楠梓店", "39-好幫手梅山店", "40-好幫手古坑店", 
-        "41-豪上豪中埔店", "42-大家來斗六店", "43-正泰斗南店", "44-響叮噹斗南店", "45-響叮噹虎尾店", "46-隆興鹿草店", "47-好鄰居白河店", "48-10五金白河店", "49-吉隆中埔店", "50-全國下營店", 
-        "51-大勝大麻豆店", "52-福德麻豆店", "53-新市新市店", "54-億久久麻豆店", "55-億久久學甲店", "56-久久久學甲店", "57-九九鹽水店", "58-九九東勢店", "59-佳來岡山店", "60-人緣大社", "61-冠達路竹店"
-    ];
+    "1-49海佃店", "2-49龍潭店", "3-49長和店", "4-49國光店", "5-49永明店", "6-49裕信店", "7-49培安店", "8-49西勢店", "9-49仁德店", "10-49路竹店", 
+    "11-上尚大灣店", "12-上尚歸仁店", "13-上新崇善店", "14-全暘新化店", "15-兆竣新化店", "16-全峰新市店", "17-洁沅善化店", "18-全國東門店", "19-大北海佃店", "20-大北和瑋店", 
+    "21-正一忠孝店", "22-正一平等店", "23-安加安定店", "24-豪億莊敬店", "25-豪億民雄店", "26-豪億水上店", "27-大豪虎尾店", "28-大利多民雄店", "29-大利多台林店", "30-大利多興中店", 
+    "31-大利多三民店", "32-來又來水上店", "33-上勝嘉義店", "34-上勝太保店", "35-億久久中正店", "36-欣億達阿蓮店", "37-駿旺莒光店", "38-駿旺楠梓店", "39-好幫手梅山店", "40-好幫手古坑店", 
+    "41-豪上豪中埔店", "42-大家來斗六店", "43-正泰斗南店", "44-響叮噹斗南店", "45-響叮噹虎尾店", "46-隆興鹿草店", "47-好鄰居白河店", "48-10五金白河店", "49-吉隆中埔店", "50-全國下營店", 
+    "51-大勝大麻豆店", "52-福德麻豆店", "53-新市新市店", "54-億久久麻豆店", "55-億久久學甲店", "56-久久久學甲店", "57-九九鹽水店", "58-九九東勢店", "59-佳來岡山店", "60-人緣大社", "61-冠達路竹店"
+];
     
     let baseProducts = [];
     let baseShops = [];
@@ -429,7 +429,7 @@ function showSyncError() {
     try {
         const response = await fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors'
+            mode: 'no-cors',
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload)
         });
@@ -544,24 +544,34 @@ function showSyncError() {
     // 請確保這裡的網址是你的那個 .../exec 網址https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
     
-    fetch(SCRIPT_URL)
-        .then(res => res.json())
-        .then(data => {
-            // 重要：這裡要檢查資料結構是否正確
-            if (data && data.records) {
-                records = data.records;
-                shopDatabase = data.config.database;
-                productsTextarea.value = data.config.products;
-                shopsTextarea.value = data.config.shops;
-                
-                baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
-                baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
-            }
-            finalizeInit();
-        })
-        .catch((err) => {
-            console.log("雲端讀取失敗或尚未存檔，使用本地備份", err);
-            // 本地讀取邏輯保持不變...
+    
+        fetch(SCRIPT_URL)
+            .then(res => res.text()) // 關鍵：改用 .text() 讀取原始文字
+            .then(data => {
+                // 關鍵：手動將文字轉為 JSON
+                let jsonData;
+                try {
+            jsonData = JSON.parse(data);
+        } catch (e) {
+            console.error("無法解析 JSON，可能是內容為空或格式錯誤", e);
+            jsonData = null; // 解析失敗則設為 null
+        }
+
+        // 檢查解析後的物件是否包含 records
+        if (jsonData && jsonData.records) {
+            records = jsonData.records;
+            shopDatabase = jsonData.config.database;
+            productsTextarea.value = jsonData.config.products;
+            shopsTextarea.value = jsonData.config.shops;
+            
+            baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
+            baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+        }
+        finalizeInit();
+    })
+    .catch((err) => {
+        console.log("雲端讀取失敗或尚未存檔，使用本地備份", err);
+        // 本地讀取邏輯保持不變...
             const savedRecords = localStorage.getItem('erp_records');
             if (savedRecords) { records = JSON.parse(savedRecords); }
             const configProds = localStorage.getItem('erp_config_products_v7');
