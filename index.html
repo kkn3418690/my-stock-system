@@ -648,31 +648,36 @@ function showSyncError() {
     }
     [inputInvoiceCustom, inputBarcodeCustom, inputColorP, inputColorR, inputColorB, inputColorW].forEach(el => { el.addEventListener('input', syncLiveInputToMemory); });
     document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-    syncLiveInputToMemory();
-    const cleanedDatabase = {};
+    // 1. 先抓取當前畫面上的設定值寫入 shopDatabase
+    syncLiveInputToMemory(); 
     
+    // 2. 使用這個物件來「補強」資料結構，而不是「重新組裝」
     baseShops.forEach(shop => {
-        // 檢查如果原本資料庫已有這家店的設定，就保留它，沒有的話給預設值
-        const existingData = shopDatabase[shop] || {}; 
+        // 如果這家店完全沒資料，才給預設值
+        if (!shopDatabase[shop]) {
+            shopDatabase[shop] = { 
+                invoice: "免開發票", 
+                barcode: "不需要條碼", 
+                billingDate: "25號結", 
+                suggestQty: {} 
+            };
+        }
         
-        cleanedDatabase[shop] = {
-            // 這裡就是關鍵：就算介面隱藏，也要抓取舊有的發票與月結日，確保不遺失
-            invoice: existingData.invoice || "免開發票",
-            barcode: existingData.barcode || "不需要條碼",
-            billingDate: existingData.billingDate || "25號結",
-            
-            // 處理商品備貨量
-            suggestQty: existingData.suggestQty || {}
-        };
+        // 確保 suggestQty 結構存在
+        if (!shopDatabase[shop].suggestQty) {
+            shopDatabase[shop].suggestQty = {};
+        }
         
-        // 確保商品層級的設定也正確 (這段維持您原本的邏輯即可)
+        // 確保每個商品都有預設值，若已經有設定則保留，沒有才補 5
         baseProducts.forEach(p => { 
-            cleanedDatabase[shop].suggestQty[p] = cleanedDatabase[shop].suggestQty[p] || { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; 
+            if (!shopDatabase[shop].suggestQty[p]) {
+                shopDatabase[shop].suggestQty[p] = { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; 
+            }
         });
     });
     
-    shopDatabase = cleanedDatabase;
-    saveAll(); // 執行同步
+    // 3. 直接存全域的 shopDatabase，這已經包含了你剛剛修改的最新內容
+    saveAll(); 
     alert('💾 設定已安全同步！');
 });
 
