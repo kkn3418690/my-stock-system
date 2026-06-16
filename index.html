@@ -3,431 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰企業社智慧備貨與雲端匯出ERP系統</title>
+    <title>...智慧備貨與雲端匯出ERP系統 v2.1</title>
     <style>
         :root {
             --primary: #E91E63;
-            --bg: #f4f6f9;
+            --bg: #f1f5f9;
             --card: #ffffff;
-            --text: #333333;
+            --text: #1e293b;
             --color-purple: #9B5DE5;
             --color-red: #FF5470;
             --color-black: #1A1A24;
             --color-white: #FFFFFF;
+            --border-color: #cbd5e1;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding: 10px; font-size: 16px; }
-        .container { max-width: 700px; margin: 0 auto; }
+        body { background-color: var(--bg); color: var(--text); padding: 8px; font-size: 14px; padding-bottom: 40px; }
+        .container { max-width: 900px; margin: 0 auto; }
         
         /* 分頁標籤 */
-        .tabs { display: flex; background: #e0e0e0; border-radius: 8px; padding: 4px; margin-bottom: 12px; }
-        .tab-btn { flex: 1; padding: 12px; text-align: center; font-weight: bold; font-size: 16px; border: none; background: transparent; cursor: pointer; border-radius: 6px; }
-        .tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tabs { display: flex; background: #e2e8f0; border-radius: 8px; padding: 4px; margin-bottom: 10px; }
+        .tab-btn { flex: 1; padding: 10px; text-align: center; font-weight: bold; font-size: 15px; border: none; background: transparent; cursor: pointer; border-radius: 6px; }
+        .tab-btn.active { background: var(--card); color: var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
         
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        h1 { text-align: center; margin: 5px 0 15px 0; color: #111; font-size: 20px; }
-        .card { background: var(--card); padding: 14px; border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 12px; }
+        h1 { text-align: center; margin: 5px 0 10px 0; color: #0f172a; font-size: 18px; }
+        .card { background: var(--card); padding: 12px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 10px; }
         
-        label { display: block; margin-bottom: 6px; font-weight: bold; color: #444; font-size: 15px; }
-        select, input[type="number"], input[type="text"], textarea { width: 100%; padding: 11px; font-size: 17px; border: 2px solid #ddd; border-radius: 8px; background: #fff; margin-bottom: 12px; }
+        label { display: block; margin-bottom: 4px; font-weight: bold; color: #334155; font-size: 14px; }
+        select, input[type="text"], textarea { width: 100%; padding: 10px; font-size: 16px; border: 2px solid var(--border-color); border-radius: 8px; background: #fff; margin-bottom: 8px; }
         select:focus, input:focus, textarea:focus { border-color: var(--primary); outline: none; }
 
-        /* 新增：項目反灰樣式 */
-        .summary-item-card { 
-    
-            transition: all 0.3s ease; 
-            cursor: pointer;
-            border: 1px solid rgba(0,0,0,0.1)
-        }
-
-        .summary-item-card.checked { 
-            background-color: #d0d0d0 !important; /* 改成灰白色 */
-            opacity: 0.5;                         /* 透明度調高，讓文字更清楚 */
-            text-decoration: line-through;
-            border-color: #d1d1d1;                /* 邊框也改淺一點 */
-            color: #999999 !important;            /* 強制將字體顏色變為淺灰色 */
-        }
-
         /* 店家合約資訊看板 */
-        .info-board { background: #fffde7; border: 2px solid #fbc02d; border-radius: 8px; padding: 10px; margin-bottom: 12px; font-size: 14px; color: #57606f; line-height: 1.5; }
-        .info-title { font-weight: bold; color: #f57c00; margin-bottom: 4px; }
+        .info-board { background: #fffde7; border: 2px solid #fbc02d; border-radius: 8px; padding: 8px; margin-bottom: 10px; font-size: 13px; color: #475569; }
+        .info-title { font-weight: bold; color: #d97706; margin-bottom: 2px; }
 
-        .color-selector { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
-        .color-btn { padding: 10px 0; border: 3px solid transparent; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; text-align: center; }
-        .btn-p { background-color: var(--color-purple); color: white; }
-        .btn-r { background-color: var(--color-red); color: white; }
-        .btn-b { background-color: var(--color-black); color: white; }
-        .btn-w { background-color: #ffffff; color: #333; border: 2px solid #ccc; }
-        .color-btn.active { border-color: #007AFF; transform: scale(1.03); box-shadow: 0 0 8px rgba(0,122,255,0.4); }
+        /* 抄貨矩陣表格全新樣式 */
+        .group-container { background: #ffffff; border-radius: 10px; border: 1px solid #cbd5e1; margin-bottom: 15px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .group-header-banner { background: #475569; color: white; padding: 8px 12px; font-weight: bold; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+        
+        .matrix-table { width: 100%; border-collapse: collapse; text-align: center; }
+        .matrix-table th, .matrix-table td { border-bottom: 1px solid #e2e8f0; padding: 6px 4px; vertical-align: middle; }
+        .matrix-table th { background: #f8fafc; font-size: 12px; color: #64748b; font-weight: bold; padding: 8px 4px; }
+        
+        /* 欄位標題可點擊樣式 */
+        .clickable-th { cursor: pointer; color: #3b82f6 !important; text-decoration: underline; }
+        .clickable-th:hover { color: #1d4ed8 !important; }
 
-        .suggest-tip { background: #e3f2fd; color: #0d47a1; padding: 8px 12px; border-radius: 6px; margin-bottom: 12px; font-size: 15px; font-weight: bold; }
+        .prod-name-td { text-align: left; font-weight: bold; color: #1e293b; font-size: 14px; padding-left: 8px !important; width: 24%; }
+        
+        /* 數量輸入框與限制容器 */
+        .cell-container { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        .matrix-qty-input { width: 50px; height: 38px; text-align: center; font-size: 18px; font-weight: bold; border: 2px solid #cbd5e1; border-radius: 6px; padding: 0; background: #fff; }
+        .matrix-qty-input:focus { border-color: var(--primary); background: #fff0f5; outline: none; }
+        .matrix-qty-input.has-value { background: #fef08a; border-color: #eab308; } /* 有輸入時變黃色顯眼 */
 
-        .qty-controller { display: flex; gap: 6px; align-items: center; margin-bottom: 14px; }
-        .qty-input { flex: 1; text-align: center; padding: 10px; font-size: 18px; font-weight: bold; margin-bottom: 0; }
-        .qty-btn { padding: 10px 14px; font-size: 15px; font-weight: bold; border: 1px solid #ccc; background: #eee; border-radius: 8px; cursor: pointer; }
-        
-        .checkbox-group { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: bold; color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 8px; }
-        .checkbox-group input { width: 22px; height: 22px; cursor: pointer; }
+        .limit-tag { font-size: 11px; color: #64748b; cursor: pointer; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; font-weight: 500; transition: all 0.2s; }
+        .limit-tag:hover { background: #cbd5e1; color: #000; }
 
-        .btn { display: block; width: 100%; padding: 12px; font-size: 17px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; text-align: center; }
-        .btn-primary { background: #E91E63; color: white; margin-bottom: 5px; }
-        .btn-secondary { background: #e0e0e0; color: #333; }
-        .btn-success { background: #28a745; color: white; font-size: 18px; margin-bottom: 15px; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
-        .btn-danger { background: #ffebee; color: #c62828; font-size: 13px; padding: 6px; border: 1px dashed #c62828; }
-        .btn-save { background: #007AFF; color: white; margin-top: 15px; font-size: 18px; }
-        
-        h2 { font-size: 17px; margin-bottom: 10px; border-left: 4px solid var(--primary); padding-left: 8px; display: flex; justify-content: space-between; align-items: center; }
-        
-        
-        /* 修改後 (請在 style 中找到對應區塊進行調整) */
-        .summary-box { background: #fff0f5; border: 2px solid #ffb6c1; padding: 7px; } /* 內距縮小 */
-        .summary-box > div { display: flex; flex-direction: column; gap: 3px; } /* 這裡原本可能是 8px，改為 3px */
-        .summary-item { font-weight: bold; font-size: 15px; background: #ffffff; border-radius: 6px; margin-bottom: 5px; padding: 10px; border-left: 4px solid var(--primary); display: flex; flex-direction: column; gap: 4px; }
-        .summary-row { display: flex; justify-content: space-between; align-items: center; width: 100%; }
-        .badge { background: var(--primary); color: white; padding: 2px 8px; border-radius: 12px; font-size: 14px; }
-        .badge-barcode { background: #ff9200; color: white; padding: 2px 8px; border-radius: 12px; font-size: 13px; margin-left: 5px; font-weight: bold; }
-        .badge-return { background: #d32f2f; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 5px; }
+        /* 右側獨立備註框樣式 */
+        .grid-remark-input { width: 100px; padding: 6px; font-size: 14px; border: 2px solid #cbd5e1; border-radius: 6px; margin-bottom: 0; text-align: left; }
+        .grid-remark-input:focus { border-color: #3b82f6; background: #f0f7ff; outline: none; }
 
-        .shop-group { margin-bottom: 12px; background: #fdfdfd; padding: 8px; border-radius: 6px; border: 1px dashed #ccc; }
-        .shop-title { font-weight: bold; color: #555; border-bottom: 1px solid #eee; padding-bottom: 4px; margin-bottom: 4px; font-size: 13px; }
-        .shop-meta { font-size: 11px; color: #ef5350; margin-bottom: 6px; background: #fff8f8; padding: 2px 6px; border-radius: 4px; }
-        
-        .history-item { color: #333; font-size: 14px; padding: 8px 0; border-bottom: 1px dotted #eee; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .history-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-        .history-suggest-tag { font-size: 12px; color: #57606f; background: #f1f2f6; padding: 2px 6px; border-radius: 4px; margin-top: 2px; display: inline-block; width: max-content; }
-        
-        .history-stock-live { font-weight: bold; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-size: 12px; display: inline-block; }
-        .stock-normal { background: #e8f5e9; color: #2e7d32; } 
-        .stock-alert { background: #ffebee; color: #c62828; }  
-        
-        .history-actions { display: flex; align-items: center; gap: 6px; }
-        .inline-qty-input { width: 60px; padding: 6px; font-size: 15px; font-weight: bold; text-align: center; border: 2px solid #b2bec3; border-radius: 6px; margin-bottom: 0; }
-        
-        .note-text { font-size: 12px; color: #888; background: #f5f5f5; padding: 2px 6px; border-radius: 4px; margin-top: 2px; display: inline-block; }
-        .empty-text { color: #999; text-align: center; padding: 12px 0; font-size: 14px; }
+        /* 備貨清單卡片反灰 */
+        .summary-item-card { transition: all 0.2s ease; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
+        .summary-item-card.checked { background-color: #e2e8f0 !important; opacity: 0.5; text-decoration: line-through; color: #94a3b8 !important; }
 
-        /* ==================== 後台自訂表單排版 ==================== */
-        .admin-meta-grid { display: flex; flex-direction: column; gap: 12px; margin-bottom: 15px; background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; }
-        .admin-select-group { display: flex; flex-direction: column; gap: 4px; }
-        .admin-select-group label { font-size: 14px; color: #475569; margin-bottom: 2px; }
-        
-        .row-flex { display: flex; gap: 8px; width: 100%; align-items: center; }
-        .row-flex select { margin-bottom: 0; flex: 1; }
-        .row-flex input { margin-bottom: 0; flex: 1; background: #fffdf0; border-color: #fbc02d; }
+        /* 歷史明細樣式 */
+        .history-item { color: #333; font-size: 13px; padding: 6px 0; border-bottom: 1px dotted #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
+        .shop-group { margin-bottom: 10px; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px dashed #cbd5e1; }
+        .shop-title { font-weight: bold; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; font-size: 13px; }
 
-        .new-matrix-box { background: #e2e8f0; border-radius: 12px; padding: 12px; border: 2px solid #cbd5e1; margin-top: 10px; }
-        .color-cards-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 10px; }
+        /* 按鈕全域 */
+        .btn { display: block; width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; text-align: center; }
+        .btn-success { background: #22c55e; color: white; font-size: 17px; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(34,197,94,0.2); }
+        .btn-danger { background: #fef2f2; color: #ef4444; font-size: 13px; padding: 6px; border: 1px dashed #ef4444; }
         
-        .big-color-card { border-radius: 10px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 2px solid transparent; }
-        .card-purple { background: #f3e5f5; border-color: var(--color-purple); }
-        .card-red { background: #ffebee; border-color: var(--color-red); }
-        .card-black { background: #e0e0e0; border-color: var(--color-black); }
-        .card-white { background: #ffffff; border-color: #b2bec3; }
-        
-        .card-title-tag { font-size: 16px; font-weight: bold; margin-bottom: 8px; padding: 2px 10px; border-radius: 15px; color: #fff; }
-        .bg-p { background: var(--color-purple); }
-        .bg-r { background: var(--color-red); }
-        .bg-b { background: var(--color-black); }
-        .bg-w { background: #7f8c8d; }
-
-        /* 終極放大、超級好點的大數字框 */
-        .big-card-input { width: 90% !important; height: 45px !important; font-size: 24px !important; font-weight: bold !important; text-align: center !important; border: 2px solid #475569 !important; border-radius: 8px !important; background: #ffffff !important; color: #000000 !important; margin-bottom: 0 !important; padding: 0 !important; }
-        .big-card-input:focus { background: #fffde7 !important; border-color: #007AFF !important; box-shadow: 0 0 8px rgba(0,122,255,0.3); }
-        
-        .tip-gray { text-align: center; color: #7f8c8d; font-size: 14px; padding: 20px 0; font-weight: bold; }
-        
-                /* 懸浮錯誤視窗 */
-        .toast-error { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #ff4d4f; color: white; padding: 15px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-        .toast-error button { background: white; color: #ff4d4f; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-
-        /* 貼在 <style> 區塊內 */
-        body { padding-bottom: 120px; }
-        #historyBar { 
-            position: fixed; bottom: 0; left: 0; right: 0; 
-            background: #333; color: white; padding: 12px; 
-            z-index: 9999; box-shadow: 0 -2px 5px rgba(0,0,0,0.3);
-            display: block; 
-        }
-        /* 在 <style> 中加入以下隱藏類別 */
-        .feature-disabled { display: none !important; }
-
+        .empty-text { color: #94a3b8; text-align: center; padding: 15px 0; font-size: 13px; }
+        .toast-error { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #ef4444; color: white; padding: 12px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .toast-error button { background: white; color: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="tabs">
-        <button class="tab-btn active" id="btn-work-tab">📝 抄貨</button>
-        <button class="tab-btn" id="btn-summary-tab">📦 備貨</button>
-        <button class="tab-btn" id="btn-setting-tab">⚙️ 後台設定</button>
+        <button class="tab-btn active" id="btn-work-tab">📝 智慧網格抄貨</button>
+        <button class="tab-btn" id="btn-summary-tab">📦 倉庫備貨清單</button>
+        <button class="tab-btn" id="btn-setting-tab">⚙️ 系統後台設定</button>
     </div>
 
-    <div id="syncStatus"
-        style="font-size:10px;
-            text-align:center;
-            color:#666;
-            margin-bottom:8px;">
-        尚未同步
-    </div>
+    <div id="syncStatus" style="font-size:11px; text-align:center; color:#64748b; margin-bottom:6px;">尚未同步</div>
     
     <div id="work-tab" class="tab-content active">
-        <h1>🏪 竣泰企業社智慧備貨與資料管理系統</h1>
-        
-        <div class="card">
-            <label for="shopSelect">1. 選擇店家</label>
-            <select id="shopSelect"></select>
-
-            <div class="info-board" id="shopInfoBoard">
-                <div class="info-title">📋 店家合約與結帳資訊</div>
-                <div id="infoDetails">請選擇店家名稱...</div>
+        <div class="card" style="padding: 10px; margin-bottom: 8px;">
+            <label for="shopSelect" style="font-size: 15px;">🏪 第一步：請選擇抄貨店家</label>
+            <select id="shopSelect" style="border: 2px solid var(--primary); font-weight: bold; color: var(--primary); margin-bottom: 6px;"></select>
+            <div class="info-board" id="shopInfoBoard" style="margin-bottom:0;">
+                <div id="infoDetails"><span style='color:#94a3b8;'>請先選取上方店家，系統將自動加載該店專屬矩陣表格...</span></div>
             </div>
-
-            <label>2. 選擇顏色分類</label>
-            <div class="color-selector">
-                <button class="color-btn btn-p active" id="color-p">紫</button>
-                <button class="color-btn btn-r" id="color-r">紅</button>
-                <button class="color-btn btn-b" id="color-b">黑</button>
-                <button class="color-btn btn-w" id="color-w">白</button>
-            </div>
-
-            <label>3. 選擇產品</label>
-            <select id="productSelect"></select>
-            
-            <div class="suggest-tip" id="suggestTip">💡 請選擇商品</div>
-            
-            <label>4. 調整本次「實際補貨」數量</label>
-            <div class="qty-controller">
-                <button class="qty-btn" id="qty-minus">-1</button>
-                <input type="number" id="itemQty" class="qty-input" inputmode="numeric" pattern="[0-9]*" value="1" min="1">
-                <button class="qty-btn" id="qty-plus1">+1</button>
-                <button class="qty-btn" id="qty-plus5">+5</button>
-            </div>
-
-            <div class="checkbox-group">
-                <input type="checkbox" id="isReturn">
-                <label for="isReturn" style="margin-bottom:0; color:#d32f2f; cursor:pointer;">⚠️ 此筆為「退換貨」紀錄</label>
-            </div>
-
-            <label for="noteInput">5. 備註功能（選填）</label>
-            <input type="text" id="noteInput" placeholder="輸入特殊備註...">
-            
-            <button class="btn btn-primary" id="addBtn">➕ 記錄該店數據</button>
         </div>
 
+        <div id="matrixCoreContainer"></div>
+
         <div class="card">
-            <h2>📝 各店家抄貨明細</h2>
-            <div id="historyList" style="max-height: 350px; overflow-y: auto;">
-                <div class="empty-text">尚未輸入明細</div>
+            <h2>📝 當前已暫存抄貨明細統計</h2>
+            <div id="historyList" style="max-height: 250px; overflow-y: auto;">
+                <div class="empty-text">尚無 any 輸入數據</div>
             </div>
-            <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-            <button class="btn btn-success" id="exportBtn">🟢 儲存並匯出至 Google 雲端 / Excel</button>
-            <button class="btn btn-danger" id="clearBtn">🗑️ 清空今日已匯出數據 (新工作日再點)</button>
+            <hr style="margin: 10px 0; border: 0; border-top: 1px solid #e2e8f0;">
+            <button class="btn btn-success" id="exportBtn">🟢 儲存並導出當日補貨單 (CSV/Excel)</button>
+            <button class="btn btn-danger" id="clearBtn">🗑️ 清空今日數據 (新工作日再點)</button>
         </div>
     </div>
 
     <div id="summary-tab" class="tab-content">
-        <h1>📦 倉庫拿貨清單</h1>
-        <div class="card summary-box">
-            <h2>📊 全店總備貨加總 (去倉庫拿貨看這) <button class="btn btn-secondary" id="copyBtn" style="width: auto; padding: 2px 8px; font-size: 12px;">複製總數</button></h2>
-            <div id="summaryList">
-                <div class="empty-text">暫無加總數據</div>
+        <h1>📦 倉庫拿貨清單 (依條碼類別集中排序)</h1>
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-weight: bold; color:#0f172a;">📊 全店總備貨加總統計表</span>
+                <button class="tab-btn" id="copyBtn" style="background: #e2e8f0; max-width: 100px; padding: 4px; font-size: 12px;">📋 複製文字</button>
             </div>
+            <div id="summaryList"><div class="empty-text">暫無加總數據</div></div>
         </div>
     </div>
 
     <div id="setting-tab" class="tab-content">
-        <h1>⚙️ 系統後台資料自訂</h1>
-        
+        <h1>⚙️ 系統後台原始資料維護</h1>
         <div class="card">
-            <h2>📦 1. 編輯商品品項 (一行代表一個商品)</h2>
-            <textarea id="productsTextarea" rows="5"></textarea>
+            <h2>📦 1. 編輯商品品項清單 (一行一個商品)</h2>
+            <textarea id="productsTextarea" rows="6"></textarea>
+            <p style="font-size:11px; color:#64748b; margin-top:-4px; margin-bottom:8px;">* 變更品項後系統會自動重新分配商品群組。</p>
         </div>
-
         <div class="card">
-            <h2>🏪 2. 編輯店家清單 (一行代表一家店)</h2>
+            <h2>🏪 2. 編輯店家清單 (一行一個店家)</h2>
             <textarea id="shopsTextarea" rows="4"></textarea>
         </div>
-
         <div class="card">
-            <h2>📊 3. 店家規範與各品項四色上限設定</h2>
-            
-            <div style="margin-top: 10px; margin-bottom: 12px;">
-                <label for="adminShopSelect" style="color: #007AFF;">第一步：選擇店家</label>
-                <select id="adminShopSelect" style="border: 2px solid #007AFF; font-weight: bold;"></select>
-            </div>
-
-            <div id="adminMainArea" style="display: none;">
-                <div class="admin-meta-grid">
-                    
-                    <div class="admin-select-group" style="display:none;">
-                        <label>📄 發票規範</label>
-                        <div class="row-flex">
-                            <select id="selectInvoice">
-                                <option value="免開發票">免開發票</option>
-                                <option value="開發票">開發票</option>
-                                <option value="">[空白] 自行輸入 ➔</option>
-                            </select>
-                            <input type="text" id="inputInvoiceCustom" placeholder="手動輸入發票規範..." style="display: none;">
-                        </div>
-                    </div>
-
-                    <div class="admin-select-group">
-                        <label>🏷️ 條碼規範</label>
-                        <div class="row-flex">
-                            <select id="selectBarcode">
-                                <option value="不需要條碼">不需要條碼</option>
-                                <option value="店家條碼">店家條碼</option>
-                                <option value="竣泰條碼">竣泰條碼</option>
-                                <option value="">[空白] 自行輸入 ➔</option>
-                            </select>
-                            <input type="text" id="inputBarcodeCustom" placeholder="手動輸入條碼規範..." style="display: none;">
-                        </div>
-                    </div>
-
-                    <div class="admin-select-group" style="display:none;">
-                        <label>📅 月結日</label>
-                        <select id="selectBillingDate"></select>
-                    </div>
-
+            <h2>🏷️ 3. 編輯店家條碼規範</h2>
+            <p style="font-size:12px; color:#64748b; margin-top:2px; margin-bottom:8px;">（系統會自動讀取上方店家清單，請為各店家選擇或輸入對應的條碼規範）</p>
+            <div id="barcodeRulesContainer" style="max-height: 250px; overflow-y: auto; border: 2px solid var(--border-color); border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;">
                 </div>
-
-                <div style="border-top: 1px solid #ddd; padding-top: 12px; margin-bottom: 12px;">
-                    <label for="adminProductSelect" style="color: #28a745;">第二步：選擇商品品項</label>
-                    <select id="adminProductSelect" style="border: 2px solid #28a745; font-weight: bold;"></select>
-                </div>
-
-                <div class="new-matrix-box" id="colorInputsBox" style="display: none;">
-                    <h3 style="font-size: 14px; text-align: center; color: #1e293b;" id="colorInputsTitle">四色建議上限量</h3>
-                    
-                    <div class="color-cards-grid">
-                        <div class="big-color-card card-purple">
-                            <span class="card-title-tag bg-p">紫色上限</span>
-                            <input type="number" class="big-card-input" id="inputColorP" inputmode="numeric" pattern="[0-9]*">
-                        </div>
-                        <div class="big-color-card card-red">
-                            <span class="card-title-tag bg-r">紅色上限</span>
-                            <input type="number" class="big-card-input" id="inputColorR" inputmode="numeric" pattern="[0-9]*">
-                        </div>
-                        <div class="big-color-card card-black">
-                            <span class="card-title-tag bg-b">黑色上限</span>
-                            <input type="number" class="big-card-input" id="inputColorB" inputmode="numeric" pattern="[0-9]*">
-                        </div>
-                        <div class="big-color-card card-white">
-                            <span class="card-title-tag bg-w">白色上限</span>
-                            <input type="number" class="big-card-input" id="inputColorW" inputmode="numeric" pattern="[0-9]*">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="adminEmptyTip" class="tip-gray">💡 請先選擇上方店家，即可開始設定</div>
-            
-            <button class="btn btn-save" id="saveSettingsBtn">💾 確定保存所有後台設定變更</button>
+            <button class="btn" id="saveSettingsBtn" style="background: #007AFF; color: white; margin-top: 5px; padding: 10px; font-size: 15px;">💾 儲存並安全同步配置</button>
         </div>
     </div>
 </div>
 
 <script>
-    
-    // 綁定 pointerdown 事件，這是最靈敏的觸控觸發點
-document.getElementById('addBtn').addEventListener('pointerdown', function(e) {
-    // 1. 觸覺回饋 (越早執行越好)
-    if (navigator.vibrate) {
-        navigator.vibrate(100); // 改短一點點，反應較快
-    }
-
-    // 2. 視覺回饋 (瞬間縮小)
-    this.style.transform = "scale(0.90)";
-    this.style.transition = "transform 0.1s";
-});
-
-// 恢復樣式並執行主要邏輯
-document.getElementById('addBtn').addEventListener('pointerup', function(e) {
-    this.style.transform = "scale(1)";
-    
-    // 原本的業務邏輯放在這裡
-    const shopName = shopSelect.value;
-    const qty = parseInt(itemQty.value, 10);
-    
-    if (!shopName) { alert('請先選擇店家！'); return; }
-    if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
-    
-    // ... 執行剩下的記錄與儲存邏輯 (records.push...)
-    // ... saveAll();
-    // ... 更新UI
-});
-
-        // 修改後的 showSyncError
-function showSyncError() {
-    if (document.getElementById('syncToast')) return; 
-    const toast = document.createElement('div');
-    toast.id = 'syncToast';
-    toast.className = 'toast-error';
-    
-    // 改用這種方式建立結構，讓關閉鈕能移除整個 toast
-    toast.innerHTML = '<span>⚠️ 網路異常，資料僅儲存於本地</span>';
-    const btn = document.createElement('button');
-    btn.textContent = '關閉';
-    btn.onclick = function() { toast.remove(); }; // 這裡移除的是 toast 本身
-    
-    toast.appendChild(btn);
-    document.body.appendChild(toast);
-}
-
-
-    
+    // 預設品項與店家定義
     const defaultProducts = [
         "40x120", "40x80", "60x60", "40x60", "40x40", "28x60", "28x40", "36x36", 
         "長高大籃", "超高大籃", "高籃", "中籃", "低特大", "低大", "長低小", "低小", 
         "平盤掛籃", "大平盤附勾", "小平盤付勾", "花架", "信架", "高籃細", "中籃細", 
-        "低籃細", "中筆筒", "筆筒", "小方筆筒", "2尺L片", "3尺L片", "C扣", "接頭", 
-        "五掛勾", "丁字勾長", "丁字勾短", "四角籃", "四角籃A-1", "四角籃A-2", 
-        "腳踏車籃", "吊籃", "2尺x3尺網片", "2尺x4尺網片", "2尺x5尺網片", 
+        "低籃細", "中筆筒", "筆筒", "小方筆筒", "C扣", "接頭", "五掛勾", "丁字勾長", 
+        "丁字勾短", "四角籃", "四角籃A-1", "四角籃A-2", "腳踏車籃", "吊籃", 
+        "2尺L片", "3尺L片", "2尺x3尺網片", "2尺x4尺網片", "2尺x5尺網片", 
         "2尺x6尺網片", "3尺x5尺網片", "3尺x6尺網片"
     ];
+
+    const categoryMapping = {
+        "40x120": "1. 尺寸規格系列（數字型）", "40x80": "1. 尺寸規格系列（數字型）", "60x60": "1. 尺寸規格系列（數字型）", "40x60": "1. 尺寸規格系列（數字型）", "40x40": "1. 尺寸規格系列（數字型）", "28x60": "1. 尺寸規格系列（數字型）", "28x40": "1. 尺寸規格系列（數字型）", "36x36": "1. 尺寸規格系列（數字型）",
+        "長高大籃": "2. 標準置物籃系列", "超高大籃": "2. 標準置物籃系列", "高籃": "2. 標準置物籃系列", "中籃": "2. 標準置物籃系列", "低特大": "2. 標準置物籃系列", "低大": "2. 標準置物籃系列", "長低小": "2. 標準置物籃系列", "低小": "2. 標準置物籃系列",
+        "平盤掛籃": "3. 平盤掛籃系列", "大平盤附勾": "3. 平盤掛籃系列", "小平盤付勾": "3. 平盤掛籃系列",
+        "花架": "4. 特殊功能架系列", "信架": "4. 特殊功能架系列",
+        "高籃細": "5. 細網置物籃系列", "中籃細": "5. 細網置物籃系列", "低籃細": "5. 細網置物籃系列",
+        "中筆筒": "6. 筆筒系列", "筆筒": "6. 筆筒系列", "小方筆筒": "6. 筆筒系列",
+        "C扣": "7. 配件與連接件", "接頭": "7. 配件與連接件",
+        "五掛勾": "8. 掛勾系列", "丁字勾長": "8. 掛勾系列", "丁字勾短": "8. 掛勾系列",
+        "四角籃": "9. 四角籃與特殊籃系列", "四角籃A-1": "9. 四角籃與特殊籃系列", "四角籃A-2": "9. 四角籃與特殊籃系列", "腳踏車籃": "9. 四角籃與特殊籃系列", "吊籃": "9. 四角籃與特殊籃系列",
+        "2尺L片": "10. L片系列", "3尺L片": "10. L片系列",
+        "2尺x3尺網片": "11. 網片系列", "2尺x4尺網片": "11. 網片系列", "2尺x5尺網片": "11. 網片系列", "2尺x6尺網片": "11. 網片系列", "3尺x5尺網片": "11. 網片系列", "3尺x6尺網片": "11. 網片系列"
+    };
     
     const defaultShops = [
         "49海佃店", "49龍潭店", "49長和店", "49國光店", "49永明店", 
         "49裕信店", "49培安店", "49西勢店", "49仁德店", "49路竹店", "台中逢甲店"
     ];
-    
+
+    const defaultBarcodes = [
+        "49海佃店|需要條碼", "49龍潭店|需要條碼", "49長和店|需要條碼", "49國光店|需要條碼", "49永明店|需要條碼",
+        "49裕信店|不需要條碼", "49培安店|需要條碼", "49西勢店|需要條碼", "49仁德店|需要條碼", "49路竹店|需要條碼", "台中逢甲店|需要條碼"
+    ];
+
+    // 全域變數
     let baseProducts = [];
     let baseShops = [];
     let shopDatabase = {}; 
-    let currentColor = '紫';
-    let records = [];
-    function safeSave(key, value) {
-    try {
-        localStorage.setItem(key, value);
-    } catch (e) {
-        alert("⚠️ 本機儲存空間不足！");
-        console.error(e);
-    }
-}
+    let records = []; 
 
-    const now = new Date().toLocaleString();
-    safeSave('erp_last_sync_time',now);
-    const syncEl =document.getElementById('syncStatus');
-    if(syncEl){syncEl.innerHTML ="☁️ 最後儲存：" + now;}
-    
-        // 統一同步函式
+    function getProductGroup(prodName) {
+        return categoryMapping[prodName] || "12. 其它綜合配件類";
+    }
+
+    function safeSave(key, value) {
+        try { localStorage.setItem(key, value); } catch (e) { console.error("本機儲存空間爆滿！", e); }
+    }
+
+    function showSyncError() {
+        if (document.getElementById('syncToast')) return; 
+        const toast = document.createElement('div');
+        toast.id = 'syncToast';
+        toast.className = 'toast-error';
+        toast.innerHTML = '<span>⚠️ 網路通訊異常，資料已先儲存於本機</span>';
+        const btn = document.createElement('button');
+        btn.textContent = '關閉';
+        btn.onclick = function() { toast.remove(); };
+        toast.appendChild(btn);
+        document.body.appendChild(toast);
+    }
+
+    // 儲存邏輯加上了條碼規範
     function saveAll() {
-        // 1. 同步到本地儲存
-        safeSave('erp_records', JSON.stringify(records));
-        safeSave('erp_config_products_v7', productsTextarea.value);
-        safeSave('erp_config_shops_v7', shopsTextarea.value);
-        safeSave('erp_shop_database_v7', JSON.stringify(shopDatabase));
+        const nowStr = new Date().toLocaleString();
         
-        // 2. 推送到 Google 雲端
+        // 動態從第 3 點的下拉選單與輸入框蒐集最新設定值，拼回原始字串格式
+        let barcodeRulesArray = [];
+        const rows = document.querySelectorAll('.barcode-rule-row');
+        rows.forEach(row => {
+            const shop = row.querySelector('.barcode-select').getAttribute('data-shop');
+            const selectValue = row.querySelector('.barcode-select').value;
+            const customInputValue = row.querySelector('.custom-barcode-input').value.trim();
+            let finalRule = (selectValue === '其他') ? customInputValue : selectValue;
+            if (!finalRule) finalRule = "不需要條碼";
+            barcodeRulesArray.push(`${shop}|${finalRule}`);
+        });
+        const currentBarcodesString = barcodeRulesArray.join('\n');
+
+        safeSave('erp_last_sync_time', nowStr);
+        safeSave('erp_matrix_records', JSON.stringify(records));
+        safeSave('erp_config_products_v8', productsTextarea.value);
+        safeSave('erp_config_shops_v8', shopsTextarea.value);
+        safeSave('erp_config_barcodes_v8', currentBarcodesString);
+        safeSave('erp_shop_database_v8', JSON.stringify(shopDatabase));
+        
+        const syncEl = document.getElementById('syncStatus');
+        if(syncEl) { syncEl.innerHTML = "☁️ 雲端與本地同步時間：" + nowStr; }
+
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
-        
         const payload = {
             records: records,
             config: {
                 products: productsTextarea.value,
                 shops: shopsTextarea.value,
+                barcodes: currentBarcodesString,
                 database: shopDatabase
             }
         };
@@ -438,55 +257,11 @@ function showSyncError() {
             headers: { "Content-Type": "text/plain" },
             body: JSON.stringify(payload)
         })
-        .then(() => console.log("雲端同步成功"))
+        .then(() => console.log("雲端同步完畢"))
         .catch(err => {
-            console.error("雲端同步失敗", err);
-            showSyncError(); // 當雲端失敗時，呼叫我們剛加入的錯誤提醒
+            console.error("雲端連線失敗", err);
+            showSyncError();
         });
-    }
-
-    const btnWorkTab = document.getElementById('btn-work-tab');
-    const btnSettingTab = document.getElementById('btn-setting-tab');
-    const btnSummaryTab = document.getElementById('btn-summary-tab'); 
-    const productsTextarea = document.getElementById('productsTextarea');
-    const shopsTextarea = document.getElementById('shopsTextarea');
-    
-    const shopSelect = document.getElementById('shopSelect');
-    const infoDetails = document.getElementById('infoDetails');
-    const productSelect = document.getElementById('productSelect');
-    const itemQty = document.getElementById('itemQty');
-    const isReturn = document.getElementById('isReturn');
-    const noteInput = document.getElementById('noteInput');
-    const suggestTip = document.getElementById('suggestTip');
-    const historyList = document.getElementById('historyList');
-    const summaryList = document.getElementById('summaryList');
-
-    const adminShopSelect = document.getElementById('adminShopSelect');
-    const adminProductSelect = document.getElementById('adminProductSelect');
-    const adminMainArea = document.getElementById('adminMainArea');
-    const adminEmptyTip = document.getElementById('adminEmptyTip');
-    const colorInputsBox = document.getElementById('colorInputsBox');
-    const colorInputsTitle = document.getElementById('colorInputsTitle');
-    
-    const selectInvoice = document.getElementById('selectInvoice');
-    const inputInvoiceCustom = document.getElementById('inputInvoiceCustom');
-    const selectBarcode = document.getElementById('selectBarcode');
-    const inputBarcodeCustom = document.getElementById('inputBarcodeCustom');
-    const selectBillingDate = document.getElementById('selectBillingDate');
-    
-    const inputColorP = document.getElementById('inputColorP');
-    const inputColorR = document.getElementById('inputColorR');
-    const inputColorB = document.getElementById('inputColorB');
-    const inputColorW = document.getElementById('inputColorW');
-
-    function buildBillingDateOptions() {
-        selectBillingDate.innerHTML = '';
-        for(let i=1; i<=31; i++) {
-            const opt = document.createElement('option');
-            opt.value = `${i}號結`;
-            opt.textContent = `${i}號結`;
-            selectBillingDate.appendChild(opt);
-        }
     }
 
     function switchTab(tabId, activeBtn) {
@@ -494,555 +269,482 @@ function showSyncError() {
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         activeBtn.classList.add('active');
-        // 貼在 switchTab 函式裡面最後面
-        const bar = document.getElementById('historyBar');
-        bar.style.display = (tabId === 'work-tab') ? 'block' : 'none';
+        if(tabId === 'work-tab') { renderMatrixTable(); }
+        updateUI();
     }
 
-    btnWorkTab.addEventListener('click', function() { switchTab('work-tab', this); });
-    btnSettingTab.addEventListener('click', function() { switchTab('setting-tab', this); initAdminSelectors(); });
-    btnSummaryTab.addEventListener('click', function() { switchTab('summary-tab', this); updateUI(); });
+    document.getElementById('btn-work-tab').addEventListener('click', function() { switchTab('work-tab', this); });
+    document.getElementById('btn-summary-tab').addEventListener('click', function() { switchTab('summary-tab', this); });
+    document.getElementById('btn-setting-tab').addEventListener('click', function() { switchTab('setting-tab', this); });
 
-    shopSelect.addEventListener('change', onShopChange);
-    productSelect.addEventListener('change', updateSuggestTip);
-
-    document.getElementById('color-p').addEventListener('click', function() { selectColor('紫', this); });
-    document.getElementById('color-r').addEventListener('click', function() { selectColor('紅', this); });
-    document.getElementById('color-b').addEventListener('click', function() { selectColor('黑', this); });
-    document.getElementById('color-w').addEventListener('click', function() { selectColor('白', this); });
-
-    document.getElementById('qty-minus').addEventListener('click', function() { adjustQty(-1); });
-    document.getElementById('qty-plus1').addEventListener('click', function() { adjustQty(1); });
-    document.getElementById('qty-plus5').addEventListener('click', function() { adjustQty(5); });
-
-    productsTextarea.addEventListener('change', () => {
-        baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
-        syncAdminProductOptions();
-    });
-    shopsTextarea.addEventListener('change', () => {
-        baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
-        syncAdminShopOptions();
-    });
-    
+    // 讀取邏輯加上了條碼規範
     function loadSystem() {
-    buildBillingDateOptions();
-    const lastTime =localStorage.getItem('erp_last_sync_time');
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
+        
+        productsTextarea.value = localStorage.getItem('erp_config_products_v8') || defaultProducts.join('\n');
+        shopsTextarea.value = localStorage.getItem('erp_config_shops_v8') || defaultShops.join('\n');
+        const cachedBarcodes = localStorage.getItem('erp_config_barcodes_v8') || defaultBarcodes.join('\n');
+        
+        baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
+        baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+        
+        const finalizeInit = () => {
+            buildShopSelectOptions();
+            renderBarcodeRulesUI();
+            renderMatrixTable();
+            updateUI();
+        };
 
-        if(lastTime){
-            const syncEl =document.getElementById('syncStatus');
-            if(syncEl){syncEl.innerHTML ="☁️ 最後儲存：" + lastTime;}
-}
-    const finalizeInit = () => {
-        buildShopSelect();
-        renderProductSelect();
-        updateUI();
-        console.log("系統初始化完成");
-    };
-
-    // 請確保這裡的網址是你的那個 .../exec 網址https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
-    
-    fetch(SCRIPT_URL)
+        fetch(SCRIPT_URL)
         .then(res => res.json())
         .then(data => {
-            // 重要：這裡要檢查資料結構是否正確
+            let remoteBarcodes = defaultBarcodes.join('\n');
             if (data && data.records) {
                 records = data.records;
                 shopDatabase = data.config.database;
-                productsTextarea.value = data.config.products;
-                shopsTextarea.value = data.config.shops;
-                
-                baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
-                baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+                productsTextarea.value = data.config.products || defaultProducts.join('\n');
+                shopsTextarea.value = data.config.shops || defaultShops.join('\n');
+                remoteBarcodes = data.config.barcodes || defaultBarcodes.join('\n');
             }
+            baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
+            baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+            
+            window.currentBarcodesRaw = remoteBarcodes;
             finalizeInit();
         })
-        .catch((err) => {
-            console.log("雲端讀取失敗或尚未存檔，使用本地備份", err);
-            // 本地讀取邏輯保持不變...
-            const savedRecords = localStorage.getItem('erp_records');
+        .catch(err => {
+            console.log("讀取雲端失敗，自動加載本地緩存...", err);
+            const savedRecords = localStorage.getItem('erp_matrix_records');
             if (savedRecords) { records = JSON.parse(savedRecords); }
-            const configProds = localStorage.getItem('erp_config_products_v7');
-            if (configProds) { productsTextarea.value = configProds; baseProducts = configProds.split('\n').map(p => p.trim()).filter(p => p !== ''); }
-            const configShops = localStorage.getItem('erp_config_shops_v7');
-            if (configShops) { shopsTextarea.value = configShops; baseShops = configShops.split('\n').map(s => s.trim()).filter(s => s !== ''); }
-            const savedDb = localStorage.getItem('erp_shop_database_v7');
+            const savedDb = localStorage.getItem('erp_shop_database_v8');
             if (savedDb) { shopDatabase = JSON.parse(savedDb); }
+            window.currentBarcodesRaw = cachedBarcodes;
             finalizeInit();
         });
-}
-
-    function initAdminSelectors() { syncAdminShopOptions(); syncAdminProductOptions(); onAdminShopChange(); }
-    function syncAdminShopOptions() {
-        const currentSelected = adminShopSelect.value;
-        adminShopSelect.innerHTML = '<option value="">-- 請選擇店家 --</option>';
-        baseShops.forEach(shop => {
-            const opt = document.createElement('option'); opt.value = shop; opt.textContent = shop;
-            adminShopSelect.appendChild(opt);
-        });
-        if(currentSelected && baseShops.includes(currentSelected)) adminShopSelect.value = currentSelected;
-    }
-    function syncAdminProductOptions() {
-        const currentSelected = adminProductSelect.value;
-        adminProductSelect.innerHTML = '<option value="">-- 請選擇商品品項 --</option>';
-        baseProducts.forEach(prod => {
-            const opt = document.createElement('option'); opt.value = prod; opt.textContent = prod;
-            adminProductSelect.appendChild(opt);
-        });
-        if(currentSelected && baseProducts.includes(currentSelected)) adminProductSelect.value = currentSelected;
     }
 
-    adminShopSelect.addEventListener('change', onAdminShopChange);
-    adminProductSelect.addEventListener('change', onAdminProductChange);
-    selectInvoice.addEventListener('change', function() {
-        if(this.value === "") { inputInvoiceCustom.style.display = "block"; inputInvoiceCustom.value = ""; } else { inputInvoiceCustom.style.display = "none"; }
-        syncLiveInputToMemory();
-    });
-    selectBarcode.addEventListener('change', function() {
-        if(this.value === "") { inputBarcodeCustom.style.display = "block"; inputBarcodeCustom.value = ""; } else { inputBarcodeCustom.style.display = "none"; }
-        syncLiveInputToMemory();
-    });
-    selectBillingDate.addEventListener('change', syncLiveInputToMemory);
+    // 動態渲染第 3 點的店家條碼選單
+    function renderBarcodeRulesUI() {
+        const BARCODE_OPTIONS = ["不需要條碼", "竣泰條碼", "店家條碼", "龍泰條碼", "其他"];
+        const container = document.getElementById('barcodeRulesContainer');
+        if(!container) return;
+        container.innerHTML = "";
 
-    function onAdminShopChange() {
-        const shop = adminShopSelect.value;
-        if(!shop) { adminMainArea.style.display = 'none'; adminEmptyTip.style.display = 'block'; return; }
-        adminMainArea.style.display = 'block'; adminEmptyTip.style.display = 'none';
-        if(!shopDatabase[shop]) { shopDatabase[shop] = { invoice: "免開發票", barcode: "不需要條碼", billingDate: "25號結", suggestQty: {} }; }
-        const dbInvoice = shopDatabase[shop].invoice || "免開發票";
-        const dbBarcode = shopDatabase[shop].barcode || "不需要條碼";
-        const dbBilling = shopDatabase[shop].billingDate || "25號結";
-        if(dbInvoice === "免開發票" || dbInvoice === "開發票") { selectInvoice.value = dbInvoice; inputInvoiceCustom.style.display = "none"; } else { selectInvoice.value = ""; inputInvoiceCustom.style.display = "block"; inputInvoiceCustom.value = dbInvoice; }
-        if(dbBarcode === "不需要條碼" || dbBarcode === "店家條碼" || dbBarcode === "竣泰條碼") { selectBarcode.value = dbBarcode; inputBarcodeCustom.style.display = "none"; } else { selectBarcode.value = ""; inputBarcodeCustom.style.display = "block"; inputBarcodeCustom.value = dbBarcode; }
-        selectBillingDate.value = dbBilling;
-        onAdminProductChange();
-    }
-
-    function onAdminProductChange() {
-        const shop = adminShopSelect.value; const prod = adminProductSelect.value;
-        if(!shop || !prod) { colorInputsBox.style.display = 'none'; return; }
-        colorInputsBox.style.display = 'block';
-        colorInputsTitle.innerHTML = `⚙️ 設定 <b>${shop}</b> 的 【${prod}】 各色上限`;
-        if(!shopDatabase[shop].suggestQty) shopDatabase[shop].suggestQty = {};
-        if(!shopDatabase[shop].suggestQty[prod]) { shopDatabase[shop].suggestQty[prod] = { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; }
-        const q = shopDatabase[shop].suggestQty[prod];
-        inputColorP.value = q['紫'] !== undefined ? q['紫'] : 5;
-        inputColorR.value = q['紅'] !== undefined ? q['紅'] : 5;
-        inputColorB.value = q['黑'] !== undefined ? q['黑'] : 5;
-        inputColorW.value = q['白'] !== undefined ? q['白'] : 5;
-    }
-
-    function syncLiveInputToMemory() {
-        const shop = adminShopSelect.value; const prod = adminProductSelect.value;
-        if(!shop) return;
-        if(selectInvoice.value === "") { shopDatabase[shop].invoice = inputInvoiceCustom.value; } else { shopDatabase[shop].invoice = selectInvoice.value; }
-        if(selectBarcode.value === "") { shopDatabase[shop].barcode = inputBarcodeCustom.value; } else { shopDatabase[shop].barcode = selectBarcode.value; }
-        shopDatabase[shop].billingDate = selectBillingDate.value;
-        if(prod) {
-            if(!shopDatabase[shop].suggestQty[prod]) shopDatabase[shop].suggestQty[prod] = {};
-            shopDatabase[shop].suggestQty[prod]['紫'] = parseInt(inputColorP.value, 10) || 0;
-            shopDatabase[shop].suggestQty[prod]['紅'] = parseInt(inputColorR.value, 10) || 0;
-            shopDatabase[shop].suggestQty[prod]['黑'] = parseInt(inputColorB.value, 10) || 0;
-            shopDatabase[shop].suggestQty[prod]['白'] = parseInt(inputColorW.value, 10) || 0;
-        }
-    }
-    [inputInvoiceCustom, inputBarcodeCustom, inputColorP, inputColorR, inputColorB, inputColorW].forEach(el => { el.addEventListener('input', syncLiveInputToMemory); });
-    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-    // 1. 先抓取當前畫面上的設定值寫入 shopDatabase
-    syncLiveInputToMemory(); 
-    
-    // 2. 使用這個物件來「補強」資料結構，而不是「重新組裝」
-    baseShops.forEach(shop => {
-        // 如果這家店完全沒資料，才給預設值
-        if (!shopDatabase[shop]) {
-            shopDatabase[shop] = { 
-                invoice: "免開發票", 
-                barcode: "不需要條碼", 
-                billingDate: "25號結", 
-                suggestQty: {} 
-            };
-        }
-        
-        // 確保 suggestQty 結構存在
-        if (!shopDatabase[shop].suggestQty) {
-            shopDatabase[shop].suggestQty = {};
-        }
-        
-        // 確保每個商品都有預設值，若已經有設定則保留，沒有才補 5
-        baseProducts.forEach(p => { 
-            if (!shopDatabase[shop].suggestQty[p]) {
-                shopDatabase[shop].suggestQty[p] = { '紫': 5, '紅': 5, '黑': 5, '白': 5 }; 
+        let rulesObj = {};
+        const rawSource = window.currentBarcodesRaw || localStorage.getItem('erp_config_barcodes_v8') || defaultBarcodes.join('\n');
+        rawSource.split('\n').map(l => l.trim()).filter(l => l !== '').forEach(line => {
+            if(line.includes('|')) {
+                const [sName, bRule] = line.split('|');
+                rulesObj[sName.trim()] = bRule.trim();
             }
         });
-    });
-    
-    // 3. 直接存全域的 shopDatabase，這已經包含了你剛剛修改的最新內容
-    saveAll(); 
-    alert('💾 設定已安全同步！');
-});
 
-    function buildShopSelect() {
-        const lastSelected = shopSelect.value;
-        shopSelect.innerHTML = '<option value="">請選擇店家...</option>';
-        baseShops.forEach(name => { const opt = document.createElement('option'); opt.value = name; opt.textContent = name; shopSelect.appendChild(opt); });
-        if(lastSelected && baseShops.includes(lastSelected)) shopSelect.value = lastSelected;
-        onShopChange();
-    }
-    function renderProductSelect() {
-        productSelect.innerHTML = '';
-        baseProducts.forEach(prod => { const opt = document.createElement('option'); opt.value = `[${currentColor}] ${prod}`; opt.textContent = `[${currentColor}] ${prod}`; opt.setAttribute('data-base-name', prod); productSelect.appendChild(opt); });
-        updateSuggestTip();
-    }
-    function onShopChange() {
-        const shopName = shopSelect.value; const shopInfo = shopDatabase[shopName];
-        if (shopInfo) { infoDetails.innerHTML = `🏷️ <b>條碼規範：</b>${shopInfo.barcode}`;  //`📌 <b>發票：</b>${shopInfo.invoice} | 🏷️ <b>條碼：</b>${shopInfo.barcode} | 📅 <b>結帳：</b>${shopInfo.billingDate}`; 
-        } else { infoDetails.innerHTML = "<span style='color:#999;'>請選擇上方店家...</span>"; }
-        updateSuggestTip();
-    }
-    function getSuggestNum(shopName, baseProdName, color) {
-        const shopInfo = shopDatabase[shopName];
-        if (shopInfo && shopInfo.suggestQty && shopInfo.suggestQty[baseProdName]) {
-            const colorMap = shopInfo.suggestQty[baseProdName];
-            return colorMap[color] !== undefined ? colorMap[color] : 5;
-        }
-        return 5;
-    }
-    
-    function updateSuggestTip() {
-    const shopName = shopSelect.value; 
-    const selectedOpt = productSelect.options[productSelect.selectedIndex];
-    if (!shopName) { suggestTip.innerHTML = `⚠️ 請先選擇店家才能查看建議量`; return; }
-    if (selectedOpt) {
-        const baseName = selectedOpt.getAttribute('data-base-name');
-        const suggestNum = getSuggestNum(shopName, baseName, currentColor);
-        // 改為輸入框格式
-        suggestTip.innerHTML = `💡 <b>${shopName}</b> 的 <span style="color:red;">[${currentColor}]</span> ${baseName} 建議上限：
-            <input type="number" id="tempLimitInput" value="${suggestNum}" style="width:60px; font-size:16px; padding:2px; border:1px solid #ccc; border-radius:4px;"> 個 
-            <button onclick="saveTempLimit()" style="padding:2px 8px; cursor:pointer;">更新</button>`;
-    }
-}
+        baseShops.forEach(shop => {
+            let currentRule = rulesObj[shop] || "店家條碼";
+            let isOther = !BARCODE_OPTIONS.includes(currentRule);
+            let selectValue = isOther ? "其他" : currentRule;
+            let customText = isOther ? currentRule : "";
 
-        function selectColor(color, btn) {
-        // 1. 紀錄當前選中的商品名稱 (移除顏色前綴)
-        const currentSelectedName = productSelect.value.replace(/\[.*?\]\s/, '');
-        
-        currentColor = color;
-        document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        // 2. 重新產生選項
-        renderProductSelect();
-        
-        // 3. 嘗試把剛剛選中的商品名稱找回來，並加上新顏色
-        const newTarget = `[${currentColor}] ${currentSelectedName}`;
-        if ([...productSelect.options].some(opt => opt.value === newTarget)) {
-            productSelect.value = newTarget;
-        }
-        
-        updateSuggestTip();
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'barcode-rule-row';
+            rowDiv.style.cssText = 'display: flex; align-items: center; gap: 10px; margin-bottom: 6px; padding: 4px; border-bottom: 1px dashed #e2e8f0;';
+
+            rowDiv.innerHTML = `
+                <span style="width: 150px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${shop}">🏪 ${shop}</span>
+                <select class="barcode-select" data-shop="${shop}" style="width: 130px; padding: 4px; font-size:14px; margin-bottom:0;" onchange="toggleCustomBarcodeFields(this)">
+                    ${BARCODE_OPTIONS.map(opt => `<option value="${opt}" ${selectValue === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>
+                <input type="text" class="custom-barcode-input" value="${customText}" placeholder="請手動輸入規範..." 
+                       style="display: ${selectValue === '其他' ? 'inline-block' : 'none'}; width: 140px; padding: 4px; font-size:14px; margin-bottom:0;" />
+            `;
+            container.appendChild(rowDiv);
+        });
     }
 
-    // --- 將 saveTempLimit 獨立出來放在外面 ---
-    function saveTempLimit() {
-        const shopName = shopSelect.value;
-        const selectedOpt = productSelect.options[productSelect.selectedIndex];
-        const baseName = selectedOpt.getAttribute('data-base-name');
-        const newLimit = parseInt(document.getElementById('tempLimitInput').value, 10);
-        
-        if (shopName && baseName && !isNaN(newLimit)) {
-            if(!shopDatabase[shopName].suggestQty[baseName]) shopDatabase[shopName].suggestQty[baseName] = {};
-            shopDatabase[shopName].suggestQty[baseName][currentColor] = newLimit;
-            
-            saveAll(); // 自動存檔同步到雲端
-            updateSuggestTip(); // 重新整理畫面
-            alert('💾 已更新該店該品項的備貨上限！');
+    // 切換「其他」手動輸入框的隱藏與顯示
+    window.toggleCustomBarcodeFields = function(selectEl) {
+        const customInput = selectEl.parentElement.querySelector('.custom-barcode-input');
+        if (selectEl.value === '其他') {
+            customInput.style.display = 'inline-block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+            customInput.value = '';
         }
     }
 
-    function adjustQty(amount) {
-        let val = parseInt(itemQty.value, 10) || 1;
-        val += amount; if (val < 1) val = 1;
-        itemQty.value = val;
-    }
-    document.getElementById('addBtn').addEventListener('click', () => {
-        const shopName = shopSelect.value; const productName = productSelect.value;
-        const selectedOpt = productSelect.options[productSelect.selectedIndex];
-        const baseProdName = selectedOpt ? selectedOpt.getAttribute('data-base-name') : '';
-        const qty = parseInt(itemQty.value, 10); const typeReturn = isReturn.checked; const note = noteInput.value.trim();
-        if (!shopName) { alert('請先選擇店家！'); return; }
-        if (isNaN(qty) || qty <= 0) { alert('請輸入有效數量'); return; }
-        records.push({ id: crypto.randomUUID(), shop: shopName, name: productName, baseName: baseProdName, color: currentColor, qty: qty, isReturn: typeReturn, note: note });
-        saveAll();
-        const recordText = `${shopName} | ${productName} x ${qty} ${typeReturn ? '(退)' : ''}`;
-
-        itemQty.value = 1;
-        isReturn.checked = false;
-        noteInput.value = "";
-        updateUI();
-
-        const last = document.getElementById('lastRecord');
-        const second = document.getElementById('secondLastRecord');
-
-        second.textContent = `2. ${last.textContent.replace('1. ', '')}`;
-        last.textContent = `1. ${recordText}`;
-    });
-    function changeItemQty(id, newQty) {
-        const val = parseInt(newQty, 10); if (isNaN(val) || val < 0) return;
-        const idx = records.findIndex(r => r.id === id);
-        if (idx !== -1) { records[idx].qty = val; saveAll(); updateUI(); }
-    }
-    function deleteItem(id) { records = records.filter(r => r.id !== id); saveAll(); updateUI(); }
-        document.getElementById('exportBtn').addEventListener('click', () => {
-    if (records.length === 0) { alert('目前沒有任何備貨數據可以儲存喔！'); return; }
-
-    const colors = ['紫', '紅', '黑', '白'];
-    const shopList = [...new Set(records.map(r => r.shop))];
-    let csvContent = "\uFEFF";
-
-    shopList.forEach(shop => {
-        const shopRecords = records.filter(r => r.shop === shop);
-        // 取得該店所有出現的品項
-        const productList =[...new Set(shopRecords.map(r => r.baseName))].sort((a,b)=>{
-    
-            return baseProducts.indexOf(a)
-                - baseProducts.indexOf(b);
-});
-        
-        csvContent += `🏪 店家：${shop}\n`;
-        csvContent += `品名,${colors.join(",")},備註\n`;
-
-        productList.forEach(prod => {
-            let row = [prod];
-            
-            // 填入四個顏色的數量 (退換貨會顯示為負數，方便計算)
-            colors.forEach(c => {
-                const qty = shopRecords
-                    .filter(r => r.baseName === prod && r.color === c)
-                    .reduce((sum, r) => sum + (r.isReturn ? -r.qty : r.qty), 0);
-                row.push(qty);
-            });
-
-            // 抓取該品項的所有備註，串接在一起
-            const notes = shopRecords
-                .filter(r => r.baseName === prod && r.note && r.note.trim() !== "")
-                .map(r => r.note.replace(/,/g, "，"))
-                .join("；");
-            row.push(notes);
-
-            csvContent += row.join(",") + "\n";
+    function buildShopSelectOptions() {
+        shopSelect.innerHTML = '<option value="">-- 請選擇抄貨店家 --</option>';
+        baseShops.forEach(shop => {
+            const opt = document.createElement('option');
+            opt.value = shop; opt.textContent = shop;
+            shopSelect.appendChild(opt);
         });
         
-        csvContent += "\n\n"; // 店家之間留空行
-    });
+        shopSelect.addEventListener('change', () => {
+            const shopName = shopSelect.value;
+            
+            // 當前選取店家時，從後台生成的下拉清單動態精準獲取條碼類別
+            if(shopName) {
+                let currentBarcode = "店家條碼";
+                const rows = document.querySelectorAll('.barcode-rule-row');
+                rows.forEach(row => {
+                    const shop = row.querySelector('.barcode-select').getAttribute('data-shop');
+                    if (shop === shopName) {
+                        const selectValue = row.querySelector('.barcode-select').value;
+                        const customInputValue = row.querySelector('.custom-barcode-input').value.trim();
+                        currentBarcode = (selectValue === '其他') ? customInputValue : selectValue;
+                    }
+                });
 
-    const blob = new Blob(["\uFEFF", csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    const today = new Date().toISOString().split('T')[0];
-
-    link.setAttribute("download",`補貨總表_${today}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    alert("🟢 報表已匯出！已將退換貨納入計算（顯示為負數），備註已彙整於右側。");
-});
-    function checkNeedBarcode(shopName) {
-        const info = shopDatabase[shopName];
-        if (!info || !info.barcode) return false;
-        const bc = info.barcode.trim();
-        if (bc === "不需要條碼" || bc === "無條碼" || bc === "無" || bc === "" || bc === "-") return false;
-        return true;
+                if(!shopDatabase[shopName]) {
+                    shopDatabase[shopName] = { barcode: currentBarcode, suggestQty: {} };
+                } else {
+                    shopDatabase[shopName].barcode = currentBarcode;
+                }
+            }
+            
+            const infoDetails = document.getElementById('infoDetails');
+            if(shopName) {
+                infoDetails.innerHTML = `🏷️ <b>條碼規範：</b>${shopDatabase[shopName].barcode || "店家條碼"}`;
+            } else {
+                infoDetails.innerHTML = "<span style='color:#94a3b8;'>請先選取上方店家...</span>";
+            }
+            renderMatrixTable();
+        });
     }
-    
-    function updateUI() {
-    if (records.length === 0) {
-        historyList.innerHTML = '<div class="empty-text">尚未輸入明細</div>';
-        summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>';
-        return;
-    }
 
-    // --- 1. 計算數據 (依條碼與商品順序分類) ---
-    const summaryByBarcode = {}; // 儲存條碼分類後的資料
-    const returnSummary = {};
-
-    records.forEach(r => {
-        if (r.isReturn) {
-            returnSummary[r.name] = (returnSummary[r.name] || 0) + r.qty;
-        } else {
-            const shopInfo = shopDatabase[r.shop];
-            const bType = (shopInfo && shopInfo.barcode) ? shopInfo.barcode : "無條碼設定";
-            if (!summaryByBarcode[bType]) summaryByBarcode[bType] = {};
-            summaryByBarcode[bType][r.name] = (summaryByBarcode[bType][r.name] || 0) + r.qty;
+    function renderMatrixTable() {
+        const container = document.getElementById('matrixCoreContainer');
+        const shopName = shopSelect.value;
+        if(!shopName) {
+            container.innerHTML = '<div class="card tip-gray" style="text-align:center; padding:40px 0; color:#94a3b8; font-weight:bold;">💡 請先選擇上方店家名稱，系統將自動展開四色抄貨網格面板</div>';
+            return;
         }
-    });
 
-    // --- 2. 渲染全店總備貨加總區塊 (條碼優先排序) ---
-    let summaryHtml = '<div style="display: flex; flex-direction: column; gap: 12px;">';
-    const colorBgMap = { '紫': '#d1a3e8', '紅': '#ff8a8a', '黑': '#9e9e9e', '白': '#ffffff' };
-    const colorTextMap = { '紫': '#4a148c', '紅': '#8b0000', '黑': '#222222', '白': '#444444' };
+        const groups = {};
+        baseProducts.forEach(prod => {
+            const gName = getProductGroup(prod);
+            if(!groups[gName]) groups[gName] = [];
+            groups[gName].push(prod);
+        });
 
-    // 依據後台設定的「條碼類別」分類顯示
-    for (const [bType, items] of Object.entries(summaryByBarcode)) {
-        summaryHtml += `<div style="border: 1px solid #ddd; padding: 10px; border-radius: 8px; background: #fff;">
-                        <h3 style="font-size: 15px; color: #ff9200; margin-bottom: 8px; border-bottom: 2px solid #ff9200; padding-bottom: 4px;">🏷️ 條碼規範：${bType}</h3>`;
+        const sortedGroupNames = Object.keys(groups).sort((a, b) => parseInt(a) - parseInt(b));
+
+        let html = '';
+        const colors = ['紫', '紅', '黑', '白'];
+
+        sortedGroupNames.forEach(gName => {
+            const prods = groups[gName];
+
+            html += `
+            <div class="group-container">
+                <div class="group-header-banner">
+                    <span>📂 ${gName}</span>
+                </div>
+                <table class="matrix-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left; padding-left:8px;">品項規格</th>
+                            <th class="clickable-th" onclick="bulkEditGroupLimit('${gName}', '紫')">💜 紫</th>
+                            <th class="clickable-th" onclick="bulkEditGroupLimit('${gName}', '紅')">❤️ 紅</th>
+                            <th class="clickable-th" onclick="bulkEditGroupLimit('${gName}', '黑')">🖤 黑</th>
+                            <th class="clickable-th" onclick="bulkEditGroupLimit('${gName}', '白')">🤍 白</th>
+                            <th>📝 備註說明</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+
+            prods.forEach(prod => {
+                html += `<tr>
+                    <td class="prod-name-td">${prod}</td>`;
+
+                colors.forEach(c => {
+                    const record = records.find(r => r.shop === shopName && r.baseName === prod && r.color === c);
+                    const qtyVal = record ? record.qty : '';
+                    
+                    if(!shopDatabase[shopName].suggestQty) shopDatabase[shopName].suggestQty = {};
+                    if(!shopDatabase[shopName].suggestQty[prod]) shopDatabase[shopName].suggestQty[prod] = { '紫':5, '紅':5, '黑':5, '白':5 };
+                    const limitNum = shopDatabase[shopName].suggestQty[prod][c] !== undefined ? shopDatabase[shopName].suggestQty[prod][c] : 5;
+
+                    html += `
+                    <td>
+                        <div class="cell-container">
+                            <input type="number" class="matrix-qty-input ${qtyVal!==''?'has-value':''}" 
+                                   id="input_${prod}_${c}" inputmode="numeric" pattern="[0-9]*"
+                                   value="${qtyVal}" onchange="updateQtyFromGrid('${prod}', '${c}', this.value)">
+                            <span class="limit-tag" title="點擊修改單一上限" onclick="quickEditSingleLimit('${prod}', '${c}', ${limitNum})">↑${limitNum}</span>
+                        </div>
+                    </td>`;
+                });
+
+                html += `
+                    <td>
+                        <input type="text" class="grid-remark-input" 
+                               placeholder="填寫備註..." 
+                               value="${getSavedNoteValue(shopName, prod)}" 
+                               onchange="updateNoteFromGrid(\`${prod}\`, this.value)">
+                    </td>
+                </tr>`;
+            });
+
+            html += `</tbody></table></div>`;
+        });
+        container.innerHTML = html;
+    }
+
+    function getSavedNoteValue(shop, prod) {
+        const found = records.find(r => r.shop === shop && r.baseName === prod && r.note);
+        return found ? found.note : '';
+    }
+
+    function quickEditSingleLimit(prod, color, currentVal) {
+        const shopName = shopSelect.value;
+        const newVal = prompt(`請輸入修改【${shopName}】的【${prod}】(${color})的建議上限：`, currentVal);
+        if(newVal === null) return;
+        const num = parseInt(newVal, 10);
+        if(isNaN(num) || num < 0) { alert("請輸入正確的數字"); return; }
         
-        // 依照 baseProducts 的順序顯示商品 (關鍵需求)
-        baseProducts.forEach(baseName => {
-            ['紫', '紅', '黑', '白'].forEach(c => {
-                const fullName = `[${c}] ${baseName}`;
-                if (items[fullName]) {
-                    const bgColor = colorBgMap[c];
-                    const textColor = colorTextMap[c];
-                    summaryHtml += `
-                       <div class="summary-item-card" onclick="this.classList.toggle('checked')"
-                            style="background: ${bgColor}; padding: 8px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; border: 1px solid #eee;">
-                         <span style="font-weight: bold; color: ${textColor}; font-size: 14px;">${baseName} (${c})</span>
-                         <span style="font-size: 16px; font-weight: 900;">${items[fullName]} 個</span>
-                       </div>`;
+        shopDatabase[shopName].suggestQty[prod][color] = num;
+        saveAll();
+        renderMatrixTable();
+    }
+
+    function bulkEditGroupLimit(groupName, color) {
+        const shopName = shopSelect.value;
+        const newVal = prompt(`【批次群組修改上限】\n請輸入整組【${groupName}】的「${color}色」全新上限值：`, "8");
+        if(newVal === null) return;
+        const num = parseInt(newVal, 10);
+        if(isNaN(num) || num < 0) { alert("請輸入正確的數字"); return; }
+
+        baseProducts.forEach(prod => {
+            if(getProductGroup(prod) === groupName) {
+                if(!shopDatabase[shopName].suggestQty[prod]) {
+                    shopDatabase[shopName].suggestQty[prod] = { '紫':5, '紅':5, '黑':5, '白':5 };
+                }
+                shopDatabase[shopName].suggestQty[prod][color] = num;
+            }
+        });
+
+        saveAll();
+        renderMatrixTable();
+        alert(`💾 已成功將整組【${groupName}】的「${color}色」建議上限一鍵同步更新為 ${num} 個！`);
+    }
+
+    function updateQtyFromGrid(prod, color, value) {
+        const shopName = shopSelect.value;
+        const qty = parseInt(value, 10);
+        const fullName = `[${color}] ${prod}`;
+        const existingNote = getSavedNoteValue(shopName, prod);
+
+        records = records.filter(r => !(r.shop === shopName && r.baseName === prod && r.color === color));
+
+        if(!isNaN(qty) && qty > 0) {
+            records.push({
+                id: crypto.randomUUID(),
+                shop: shopName,
+                name: fullName,
+                baseName: prod,
+                color: color,
+                qty: qty,
+                isReturn: false,
+                note: existingNote
+            });
+        }
+        saveAll();
+        updateUI();
+        
+        const el = document.getElementById(`input_${prod}_${color}`);
+        if(el) {
+            if(!isNaN(qty) && qty > 0) el.classList.add('has-value'); else el.classList.remove('has-value');
+        }
+    }
+
+    function updateNoteFromGrid(prod, noteValue) {
+        const shopName = shopSelect.value;
+        const cleanNote = noteValue.trim();
+        const targets = records.filter(r => r.shop === shopName && r.baseName === prod);
+        
+        if(targets.length === 0) {
+            records.push({
+                id: crypto.randomUUID(), shop: shopName, name: `[紫] ${prod}`, baseName: prod, color: '紫', qty: 0, isReturn: false, note: cleanNote
+            });
+        } else {
+            targets.forEach(r => { r.note = cleanNote; });
+        }
+        
+        if(cleanNote === "") {
+            records = records.filter(r => !(r.shop === shopName && r.baseName === prod && r.qty === 0));
+        }
+
+        saveAll();
+        updateUI();
+    }
+
+    function updateUI() {
+        if (records.length === 0) {
+            historyList.innerHTML = '<div class="empty-text">尚無 any 輸入數據</div>';
+            summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>';
+            return;
+        }
+
+        const summaryByBarcode = {}; 
+
+        records.forEach(r => {
+            if (r.qty === 0 && !r.note) return; 
+            if (r.qty > 0) {
+                const shopInfo = shopDatabase[r.shop];
+                const bType = (shopInfo && shopInfo.barcode) ? shopInfo.barcode : "店家條碼";
+                if (!summaryByBarcode[bType]) summaryByBarcode[bType] = {};
+                summaryByBarcode[bType][r.name] = (summaryByBarcode[bType][r.name] || 0) + r.qty;
+            }
+        });
+
+        let summaryHtml = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+        const colorBgMap = { '紫': '#f3e8ff', '紅': '#fee2e2', '黑': '#e2e8f0', '白': '#ffffff' };
+        const colorTextMap = { '紫': '#6b21a8', '紅': '#991b1b', '黑': '#1e293b', '白': '#334155' };
+
+        for (const [bType, items] of Object.entries(summaryByBarcode)) {
+            summaryHtml += `<div style="border: 1px solid #cbd5e1; padding: 8px; border-radius: 8px; background: #fff;">
+                            <h3 style="font-size: 14px; color: #ea580c; margin-bottom: 6px; border-bottom: 2px solid #ea580c; padding-bottom: 2px;">🏷️ 條碼規範：${bType}</h3>`;
+            
+            baseProducts.forEach(baseName => {
+                ['紫', '紅', '黑', '白'].forEach(c => {
+                    const fullName = `[${c}] ${baseName}`;
+                    if (items[fullName]) {
+                        summaryHtml += `
+                           <div class="summary-item-card" onclick="this.classList.toggle('checked')"
+                                style="background: ${colorBgMap[c]}; padding: 6px 10px; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; border: 1px solid #cbd5e1;">
+                             <span style="font-weight: bold; color: ${colorTextMap[c]}; font-size: 13px;">${baseName} (${c})</span>
+                             <span style="font-size: 15px; font-weight: 900; color:#000;">${items[fullName]} 個</span>
+                           </div>`;
+                    }
+                });
+            });
+            summaryHtml += `</div>`;
+        }
+
+        summaryList.innerHTML = summaryHtml + '</div>';
+
+        const shopGroups = {};
+        records.forEach(r => { 
+            if(r.qty === 0 && !r.note) return;
+            if (!shopGroups[r.shop]) shopGroups[r.shop] = []; 
+            shopGroups[r.shop].push(r); 
+        });
+
+        let historyHtml = '<div>';
+        for (const [shop, items] of Object.entries(shopGroups)) {
+            const renderedKeys = new Set();
+            let shopHasContent = false;
+            let tempGroupHtml = `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div>`;
+            
+            items.forEach(item => {
+                if(item.qty > 0) {
+                    shopHasContent = true;
+                    const suggestNum = (shopDatabase[shop] && shopDatabase[shop].suggestQty && shopDatabase[shop].suggestQty[item.baseName]) ? shopDatabase[shop].suggestQty[item.baseName][item.color] : 5;
+                    tempGroupHtml += `<div class="history-item">
+                        <div>
+                            <b>${item.name}</b>
+                            <span style="font-size:11px; color:#64748b; margin-left:8px;">[上限:${suggestNum}]</span>
+                            ${item.note?`<br><span style="color:#2563eb; font-size:12px;">📝 備註: ${item.note}</span>`:''}
+                        </div>
+                        <div><span style="font-size:14px; font-weight:bold;">${item.qty} 個</span></div>
+                    </div>`;
+                } else if(item.qty === 0 && item.note && !renderedKeys.has(item.baseName)) {
+                    shopHasContent = true;
+                    renderedKeys.add(item.baseName);
+                    tempGroupHtml += `<div class="history-item">
+                        <div>
+                            <b>${item.baseName}</b>
+                            <br><span style="color:#2563eb; font-size:12px;">📝 純備註: ${item.note}</span>
+                        </div>
+                        <div><span style="font-size:14px; color:#94a3b8;">-</span></div>
+                    </div>`;
                 }
             });
-        });
-        summaryHtml += `</div>`;
-    }
-
-    // 加入退換貨顯示
-    if (Object.keys(returnSummary).length > 0) {
-        summaryHtml += `<div style="background:#ffebee; padding: 10px; border-radius: 8px; border: 2px dashed #d32f2f; margin-top:10px;">
-            <div style="font-weight: bold; color:#d32f2f; margin-bottom: 5px;">⚠️ 退換貨清單：</div>`;
-        for (const [name, qty] of Object.entries(returnSummary)) {
-            summaryHtml += `<div style="display:flex; justify-content:space-between; font-size:14px;"><span>${name}</span> <span>${qty} 個</span></div>`;
+            tempGroupHtml += `</div>`;
+            if(shopHasContent) historyHtml += tempGroupHtml;
         }
-        summaryHtml += `</div>`;
+        historyList.innerHTML = historyHtml + '</div>';
     }
-    summaryList.innerHTML = summaryHtml + '</div>';
 
-    // --- 3. 渲染下方的各店家明細 (保留原有功能) ---
-    const shopGroups = {};
-    records.forEach(r => { if (!shopGroups[r.shop]) shopGroups[r.shop] = []; shopGroups[r.shop].push(r); });
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        if (records.length === 0) { alert('當前無 any 抄貨暫存數據！'); return; }
+        const colors = ['紫', '紅', '黑', '白'];
+        const shopList = [...new Set(records.map(r => r.shop))];
+        let csvContent = "\uFEFF";
 
-    let historyHtml = '<div>';
-    for (const [shop, items] of Object.entries(shopGroups)) {
-        const info = shopDatabase[shop];
-        const metaStr = info ? `📄 發票: ${info.invoice} | 🏷️ 條碼: ${info.barcode} | 📅 結帳: ${info.billingDate}` : '';
-        historyHtml += `<div class="shop-group"><div class="shop-title">🏪 店家：<b>${shop}</b></div><div class="shop-meta">${metaStr}</div>`;
-        
-        const groupedItems = {};
-        items.forEach(item => {
-            const key = `${shop}|${item.name}|${item.isReturn}`;
-            if (!groupedItems[key]) { groupedItems[key] = { ...item, notes: item.note ? [item.note] : [] }; }
-            else { groupedItems[key].qty += item.qty; if (item.note) groupedItems[key].notes.push(item.note); }
+        shopList.forEach(shop => {
+            const shopRecords = records.filter(r => r.shop === shop);
+            const productList = [...new Set(shopRecords.map(r => r.baseName))].sort((a,b) => baseProducts.indexOf(a) - baseProducts.indexOf(b));
+            
+            csvContent += `🏪 店家：${shop}\n`;
+            csvContent += `品名,${colors.join(",")},備註\n`;
+
+            productList.forEach(prod => {
+                let row = [prod];
+                let hasQty = false;
+                colors.forEach(c => {
+                    const matched = shopRecords.filter(r => r.baseName === prod && r.color === c);
+                    const totalQty = matched.reduce((sum, r) => sum + r.qty, 0);
+                    if(totalQty > 0) hasQty = true;
+                    row.push(totalQty === 0 ? '' : totalQty);
+                });
+
+                const notes = shopRecords.filter(r => r.baseName === prod && r.note).map(r => r.note.replace(/,/g, "，")).join("；");
+                row.push(notes);
+                
+                if(hasQty || notes !== "") {
+                    csvContent += row.join(",") + "\n";
+                }
+            });
+            csvContent += "\n\n";
         });
 
-        const sortedKeys = Object.keys(groupedItems).sort((a, b) => baseProducts.indexOf(groupedItems[a].baseName) - baseProducts.indexOf(groupedItems[b].baseName));
-
-        sortedKeys.forEach(key => {
-            const item = groupedItems[key];
-            const [shopName, itemName, isReturnStr] = key.split('|');
-            const returnTag = item.isReturn ? `<span class="badge-return">退換貨</span>` : '';
-            const noteText = item.notes.length > 0 ? `<br><span class="note-text">📝 備註: ${item.notes.join("；")}</span>` : '';
-            const suggestNum = getSuggestNum(shop, item.baseName, item.color || '紫');
-            historyHtml += `<div class="history-item">
-                <div class="history-info"><div><span>${item.name} ${returnTag}</span></div><div><span class="history-suggest-tag">建議上限: ${suggestNum}</span></div>${noteText}</div>
-                <div class="history-actions"><input type="number" class="inline-qty-input" value="${item.qty}" onchange="changeGroupQty('${key}', this.value)"><button class="btn btn-danger" onclick="deleteGroup('${key}')" style="padding: 5px 8px;">❌</button></div>
-            </div>`;
-        });
-        historyHtml += `</div>`;
-    }
-    historyList.innerHTML = historyHtml + '</div>';
-}
-
-    document.getElementById('clearBtn').addEventListener('click', () => { 
-    if (confirm('確定清空今日所有紀錄嗎？')) { 
-        records = []; 
-        saveAll(); // 呼叫 saveAll() 會將空的 records 傳送到雲端，同時更新本地
-        updateUI(); 
-        alert('紀錄已清空並同步至雲端');
-    } 
-});
+        const blob = new Blob(["\uFEFF", csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.setAttribute("href", URL.createObjectURL(blob));
+        link.setAttribute("download", `補貨總表_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    });
 
     document.getElementById('copyBtn').addEventListener('click', () => {
-        if (records.length === 0) return alert('沒有數據');
-        const totalSummary = {}; records.forEach(r => { if(!r.isReturn) totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty; });
-        let text = "📋 【今日全店總備貨清單】\n";
+        if (records.length === 0) return alert('目前沒有 any 數據');
+        const totalSummary = {}; 
+        records.forEach(r => { if(r.qty > 0) totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty; });
+        let text = "📋 【今日全店總備貨集中清單】\n";
         for (const [name, qty] of Object.entries(totalSummary)) { text += `• ${name}： ${qty} 個\n`; }
-        navigator.clipboard.writeText(text).then(() => alert('總備貨數已複製！'));
+        navigator.clipboard.writeText(text).then(() => alert('總備貨清單已成功複製到剪貼簿！'));
     });
+
+    document.getElementById('clearBtn').addEventListener('click', () => { 
+        if (confirm('確定要完整清空今日所有網格抄貨暫存紀錄嗎？')) { 
+            records = []; 
+            saveAll(); 
+            renderMatrixTable();
+            updateUI(); 
+            alert('數據已全數歸零並即時同步。');
+        } 
+    });
+
+    // 後台配置保存與連動更新
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+        baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
+        baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
+        
+        // 1. 自動讀取當前下拉選單最新設定並寫入本地及雲端
+        saveAll(); 
+        // 2. 重新編排工作主頁店家的下拉選單
+        buildShopSelectOptions();
+        // 3. 重新同步刷新後台第 3 點選單（確保第 2 點若有增減店名，此處能即時同步對齊）
+        renderBarcodeRulesUI();
+        alert('💾 後台連動設定（含各店條碼規範）已安全完成同步！');
+    });
+
     loadSystem();
-    
-    // 修改分組後的數量 (已修正邏輯，確保店家資訊不遺失)
-    function changeGroupQty(key, newQty) {
-    const [shopName, name, isReturnStr] = key.split('|');
-    const isReturn = isReturnStr === 'true';
-    const val = parseInt(newQty, 10);
-    if (isNaN(val) || val < 0) return;
-
-    // 找出原本資料
-    const oldRecords = records.filter(
-        r =>
-            r.shop === shopName &&
-            r.name === name &&
-            String(r.isReturn) === isReturnStr
-    );
-
-    if (oldRecords.length === 0) return;
-    const firstRecord = oldRecords[0];
-
-    const allNotes = oldRecords
-    .map(r => r.note)
-    .filter(n => n && n.trim() !== '')
-    .join('；');
-
-    // 刪除舊資料
-    records = records.filter(
-        r =>
-            !(
-                r.shop === shopName &&
-                r.name === name &&
-                String(r.isReturn) === isReturnStr
-            )
-    );
-
-    // 保留備註
-    records.push({
-        id: crypto.randomUUID(),
-        shop: shopName,
-        name: name,
-        qty: val,
-        isReturn: isReturn,
-        color: firstRecord.color,
-        baseName: firstRecord.baseName,
-        note: allNotes
-    });
-
-    saveAll();
-    updateUI();
-}
-
-// 刪除該組所有紀錄
-function deleteGroup(key) {
-    if (!confirm('確定刪除嗎？')) return;
-    const [shopName, name, isReturnStr] = key.split('|');
-    records = records.filter(
-        r => !(
-            r.shop === shopName &&
-            r.name === name &&
-            String(r.isReturn) === isReturnStr
-        )
-    );
-
-    saveAll();
-    updateUI();
-}
-
 </script>
-
-    <!-- 貼在 </body> 的上一行 -->
-<div id="historyBar">
-    <div style="font-weight: bold; margin-bottom: 5px; color: #ffeb3b;">🕒 最近兩筆紀錄：</div>
-    <div id="lastRecord" style="margin-bottom: 3px; font-size: 14px;">1. (等待記錄...)</div>
-    <div id="secondLastRecord" style="font-size: 14px;">2. (等待記錄...)</div>
-</div>
-
 </body>
 </html>
