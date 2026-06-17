@@ -731,17 +731,38 @@
     });
 
     // 後台配置保存與連動更新
+        // 後台配置保存與連動更新
     document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+        const oldProducts = [...baseProducts]; // 暫存舊的商品清單
         baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
         baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
         
+        // 【核心修正】同步更新 records 陣列中舊商品的 baseName 和 name，避免備貨清單與後台脫鉤
+        records.forEach(r => {
+            // 尋找舊商品在陣列中的位置索引
+            const oldIndex = oldProducts.indexOf(r.baseName);
+            // 如果找得到舊位置，且這個位置在新的商品清單內有對應的新名字
+            if (oldIndex !== -1 && baseProducts[oldIndex]) {
+                const newBaseName = baseProducts[oldIndex];
+                if (r.baseName !== newBaseName) {
+                    r.baseName = newBaseName;
+                    r.name = `[${r.color}] ${newBaseName}`;
+                }
+            }
+        });
+
         // 1. 自動讀取當前下拉選單最新設定並寫入本地及雲端
         saveAll(); 
         // 2. 重新編排工作主頁店家的下拉選單
         buildShopSelectOptions();
-        // 3. 重新同步刷新後台第 3 點選單（確保第 2 點若有增減店名，此處能即時同步對齊）
+        // 3. 重新同步刷新後台第 3 點選單
         renderBarcodeRulesUI();
-        alert('💾 後台連動設定（含各店條碼規範）已安全完成同步！');
+        
+        // 【核心修正】強制前台網格與備貨清單即時同步刷新
+        renderMatrixTable();
+        updateUI();
+
+        alert('💾 後台連動設定（商品名稱已同步更新）已安全完成同步！');
     });
 
     loadSystem();
