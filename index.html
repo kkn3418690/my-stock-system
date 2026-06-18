@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>...智慧備貨與雲端匯出ERP系統 v2.1</title>
+    <title>智慧備貨與雲端匯出ERP系統 v2.2</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -39,7 +39,7 @@
         .info-board { background: #fffde7; border: 2px solid #fbc02d; border-radius: 8px; padding: 8px; margin-bottom: 10px; font-size: 13px; color: #475569; }
         .info-title { font-weight: bold; color: #d97706; margin-bottom: 2px; }
 
-        /* 抄貨矩陣表格全新樣式 */
+        /* 抄貨矩陣表格樣式 */
         .group-container { background: #ffffff; border-radius: 10px; border: 1px solid #cbd5e1; margin-bottom: 15px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         .group-header-banner { background: #475569; color: white; padding: 8px 12px; font-weight: bold; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
         
@@ -47,42 +47,36 @@
         .matrix-table th, .matrix-table td { border-bottom: 1px solid #e2e8f0; padding: 6px 4px; vertical-align: middle; }
         .matrix-table th { background: #f8fafc; font-size: 12px; color: #64748b; font-weight: bold; padding: 8px 4px; }
         
-        /* 欄位標題可點擊樣式 */
         .clickable-th { cursor: pointer; color: #3b82f6 !important; text-decoration: underline; }
         .clickable-th:hover { color: #1d4ed8 !important; }
 
         .prod-name-td { text-align: left; font-weight: bold; color: #1e293b; font-size: 14px; padding-left: 8px !important; width: 24%; }
         
-        /* 數量輸入框與限制容器 */
         .cell-container { display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .matrix-qty-input { width: 50px; height: 38px; text-align: center; font-size: 18px; font-weight: bold; border: 2px solid #cbd5e1; border-radius: 6px; padding: 0; background: #fff; }
         .matrix-qty-input:focus { border-color: var(--primary); background: #fff0f5; outline: none; }
-        .matrix-qty-input.has-value { background: #fef08a; border-color: #eab308; } /* 有輸入時變黃色顯眼 */
+        .matrix-qty-input.has-value { background: #fef08a; border-color: #eab308; }
 
         .limit-tag { font-size: 11px; color: #64748b; cursor: pointer; background: #f1f5f9; padding: 1px 4px; border-radius: 4px; font-weight: 500; transition: all 0.2s; }
         .limit-tag:hover { background: #cbd5e1; color: #000; }
 
-        /* 右側獨立備註框樣式 */
         .grid-remark-input { width: 100px; padding: 6px; font-size: 14px; border: 2px solid #cbd5e1; border-radius: 6px; margin-bottom: 0; text-align: left; }
         .grid-remark-input:focus { border-color: #3b82f6; background: #f0f7ff; outline: none; }
 
-        /* 備貨清單卡片反灰 */
         .summary-item-card { transition: all 0.2s ease; cursor: pointer; border: 1px solid rgba(0,0,0,0.1); }
         .summary-item-card.checked { background-color: #e2e8f0 !important; opacity: 0.5; text-decoration: line-through; color: #94a3b8 !important; }
 
-        /* 歷史明細樣式 */
         .history-item { color: #333; font-size: 13px; padding: 6px 0; border-bottom: 1px dotted #e2e8f0; display: flex; align-items: center; justify-content: space-between; }
         .shop-group { margin-bottom: 10px; background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px dashed #cbd5e1; }
         .shop-title { font-weight: bold; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 4px; font-size: 13px; }
 
-        /* 按鈕全域 */
         .btn { display: block; width: 100%; padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; text-align: center; }
         .btn-success { background: #22c55e; color: white; font-size: 17px; margin-bottom: 10px; box-shadow: 0 4px 6px rgba(34,197,94,0.2); }
         .btn-danger { background: #fef2f2; color: #ef4444; font-size: 13px; padding: 6px; border: 1px dashed #ef4444; }
         
         .empty-text { color: #94a3b8; text-align: center; padding: 15px 0; font-size: 13px; }
-        .toast-error { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #ef4444; color: white; padding: 12px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-        .toast-error button { background: white; color: #ef4444; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .toast-error { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #dc2626; color: white; padding: 12px; border-radius: 8px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+        .toast-error button { background: white; color: #dc2626; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -110,7 +104,7 @@
         <div class="card">
             <h2>📝 當前已暫存抄貨明細統計</h2>
             <div id="historyList" style="max-height: 250px; overflow-y: auto;">
-                <div class="empty-text">尚無 any 輸入數據</div>
+                <div class="empty-text">尚無任何輸入數據</div>
             </div>
             <hr style="margin: 10px 0; border: 0; border-top: 1px solid #e2e8f0;">
             <button class="btn btn-success" id="exportBtn">🟢 儲存並導出當日補貨單 (CSV/Excel)</button>
@@ -143,15 +137,13 @@
         <div class="card">
             <h2>🏷️ 3. 編輯店家條碼規範</h2>
             <p style="font-size:12px; color:#64748b; margin-top:2px; margin-bottom:8px;">（系統會自動讀取上方店家清單，請為各店家選擇或輸入對應的條碼規範）</p>
-            <div id="barcodeRulesContainer" style="max-height: 250px; overflow-y: auto; border: 2px solid var(--border-color); border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;">
-                </div>
+            <div id="barcodeRulesContainer" style="max-height: 250px; overflow-y: auto; border: 2px solid var(--border-color); border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;"></div>
             <button class="btn" id="saveSettingsBtn" style="background: #007AFF; color: white; margin-top: 5px; padding: 10px; font-size: 15px;">💾 儲存並安全同步配置</button>
         </div>
     </div>
 </div>
 
 <script>
-    // 預設品項與店家定義
     const defaultProducts = [
         "40x120", "40x80", "60x60", "40x60", "40x40", "28x60", "28x40", "36x36", 
         "長高大籃", "超高大籃", "高籃", "中籃", "低特大", "低大", "長低小", "低小", 
@@ -186,38 +178,41 @@
         "49裕信店|不需要條碼", "49培安店|需要條碼", "49西勢店|需要條碼", "49仁德店|需要條碼", "49路竹店|需要條碼", "台中逢甲店|需要條碼"
     ];
 
-    // 全域變數
     let baseProducts = [];
     let baseShops = [];
     let shopDatabase = {}; 
     let records = []; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
 
     function getProductGroup(prodName) {
         return categoryMapping[prodName] || "12. 其它綜合配件類";
     }
 
-    function safeSave(key, value) {
-        try { localStorage.setItem(key, value); } catch (e) { console.error("本機儲存空間爆滿！", e); }
-    }
-
-    function showSyncError() {
+    function showSyncError(customMsg) {
         if (document.getElementById('syncToast')) return; 
         const toast = document.createElement('div');
         toast.id = 'syncToast';
         toast.className = 'toast-error';
-        toast.innerHTML = '<span>⚠️ 網路通訊異常，資料已先儲存於本機</span>';
+        toast.innerHTML = `<span>⚠️ <b>【網路異常/同步失敗】</b> ${customMsg || '無法連線至雲端 Excel，請檢查網路。請勿繼續輸入！'}</span>`;
         const btn = document.createElement('button');
-        btn.textContent = '關閉';
-        btn.onclick = function() { toast.remove(); };
+        btn.textContent = '重試連線';
+        btn.onclick = function() { 
+            toast.remove(); 
+            loadSystem(); 
+        };
         toast.appendChild(btn);
         document.body.appendChild(toast);
     }
 
-    // 儲存邏輯加上了條碼規範
+    function removeSyncError() {
+        const toast = document.getElementById('syncToast');
+        if (toast) toast.remove();
+    }
+
     function saveAll() {
-        const nowStr = new Date().toLocaleString();
-        
-        // 動態從第 3 點的下拉選單與輸入框蒐集最新設定值，拼回原始字串格式
+        const syncEl = document.getElementById('syncStatus');
+        if(syncEl) { syncEl.innerHTML = "⏳ 正在即時同步資料至雲端 Excel..."; }
+
         let barcodeRulesArray = [];
         const rows = document.querySelectorAll('.barcode-rule-row');
         rows.forEach(row => {
@@ -230,17 +225,6 @@
         });
         const currentBarcodesString = barcodeRulesArray.join('\n');
 
-        safeSave('erp_last_sync_time', nowStr);
-        safeSave('erp_matrix_records', JSON.stringify(records));
-        safeSave('erp_config_products_v8', productsTextarea.value);
-        safeSave('erp_config_shops_v8', shopsTextarea.value);
-        safeSave('erp_config_barcodes_v8', currentBarcodesString);
-        safeSave('erp_shop_database_v8', JSON.stringify(shopDatabase));
-        
-        const syncEl = document.getElementById('syncStatus');
-        if(syncEl) { syncEl.innerHTML = "☁️ 雲端與本地同步時間：" + nowStr; }
-
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
         const payload = {
             records: records,
             config: {
@@ -253,14 +237,27 @@
         
         fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors',
+            mode: 'cors', 
             headers: { "Content-Type": "text/plain" },
             body: JSON.stringify(payload)
         })
-        .then(() => console.log("雲端同步完畢"))
+        .then(res => {
+            if(!res.ok) throw new Error("HTTP 狀態碼異常");
+            return res.json();
+        })
+        .then(resData => {
+            if(resData && resData.status === "SUCCESS"){
+                removeSyncError();
+                const nowStr = new Date().toLocaleString();
+                if(syncEl) { syncEl.innerHTML = "🟢 雲端最新同步時間：" + nowStr; }
+            } else {
+                throw new Error(resData.message || "後端寫入失敗");
+            }
+        })
         .catch(err => {
             console.error("雲端連線失敗", err);
-            showSyncError();
+            if(syncEl) { syncEl.innerHTML = "<span style='color:#ef4444;'>❌ 雲端同步失敗！資料未寫入 Excel</span>"; }
+            showSyncError('剛才的輸入「寫入失敗」！Excel 沒有存到，請檢查網路或重新整理。');
         });
     }
 
@@ -269,39 +266,33 @@
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         activeBtn.classList.add('active');
-        if(tabId === 'work-tab') { renderMatrixTable(); }
+        
+        // 修正：切換分頁時本地 UI 重新計算渲染即可，不盲目覆蓋拉取
         updateUI();
+        if(tabId === 'work-tab') {
+            renderMatrixTable();
+        }
     }
 
     document.getElementById('btn-work-tab').addEventListener('click', function() { switchTab('work-tab', this); });
     document.getElementById('btn-summary-tab').addEventListener('click', function() { switchTab('summary-tab', this); });
     document.getElementById('btn-setting-tab').addEventListener('click', function() { switchTab('setting-tab', this); });
 
-    // 讀取邏輯加上了條碼規範
     function loadSystem() {
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
-        
-        productsTextarea.value = localStorage.getItem('erp_config_products_v8') || defaultProducts.join('\n');
-        shopsTextarea.value = localStorage.getItem('erp_config_shops_v8') || defaultShops.join('\n');
-        const cachedBarcodes = localStorage.getItem('erp_config_barcodes_v8') || defaultBarcodes.join('\n');
-        
-        baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
-        baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
-        
-        const finalizeInit = () => {
-            buildShopSelectOptions();
-            renderBarcodeRulesUI();
-            renderMatrixTable();
-            updateUI();
-        };
+        const syncEl = document.getElementById('syncStatus');
+        if(syncEl) { syncEl.innerHTML = "🔍 正在從雲端讀取最新即時資料..."; }
 
         fetch(SCRIPT_URL)
-        .then(res => res.json())
+        .then(res => {
+            if(!res.ok) throw new Error("無法取得線上數據");
+            return res.json();
+        })
         .then(data => {
+            removeSyncError();
             let remoteBarcodes = defaultBarcodes.join('\n');
             if (data && data.records) {
                 records = data.records;
-                shopDatabase = data.config.database;
+                shopDatabase = data.config.database || {};
                 productsTextarea.value = data.config.products || defaultProducts.join('\n');
                 shopsTextarea.value = data.config.shops || defaultShops.join('\n');
                 remoteBarcodes = data.config.barcodes || defaultBarcodes.join('\n');
@@ -310,20 +301,21 @@
             baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
             
             window.currentBarcodesRaw = remoteBarcodes;
-            finalizeInit();
+
+            buildShopSelectOptions();
+            renderBarcodeRulesUI();
+            renderMatrixTable();
+            updateUI();
+            
+            if(syncEl) { syncEl.innerHTML = "🟢 已成功載入線上最新 Excel 資料"; }
         })
         .catch(err => {
-            console.log("讀取雲端失敗，自動加載本地緩存...", err);
-            const savedRecords = localStorage.getItem('erp_matrix_records');
-            if (savedRecords) { records = JSON.parse(savedRecords); }
-            const savedDb = localStorage.getItem('erp_shop_database_v8');
-            if (savedDb) { shopDatabase = JSON.parse(savedDb); }
-            window.currentBarcodesRaw = cachedBarcodes;
-            finalizeInit();
+            console.error("讀取雲端失敗", err);
+            if(syncEl) { syncEl.innerHTML = "<span style='color:#ef4444;'>❌ 無法載入最新線上資料</span>"; }
+            showSyncError('讀取雲端 Excel 失敗！請勿進行抄貨，請檢查網路後按下方重試。');
         });
     }
 
-    // 動態渲染第 3 點的店家條碼選單
     function renderBarcodeRulesUI() {
         const BARCODE_OPTIONS = ["不需要條碼", "竣泰條碼", "店家條碼", "龍泰條碼", "其他"];
         const container = document.getElementById('barcodeRulesContainer');
@@ -331,7 +323,7 @@
         container.innerHTML = "";
 
         let rulesObj = {};
-        const rawSource = window.currentBarcodesRaw || localStorage.getItem('erp_config_barcodes_v8') || defaultBarcodes.join('\n');
+        const rawSource = window.currentBarcodesRaw || defaultBarcodes.join('\n');
         rawSource.split('\n').map(l => l.trim()).filter(l => l !== '').forEach(line => {
             if(line.includes('|')) {
                 const [sName, bRule] = line.split('|');
@@ -361,7 +353,6 @@
         });
     }
 
-    // 切換「其他」手動輸入框的隱藏與顯示
     window.toggleCustomBarcodeFields = function(selectEl) {
         const customInput = selectEl.parentElement.querySelector('.custom-barcode-input');
         if (selectEl.value === '其他') {
@@ -374,17 +365,18 @@
     }
 
     function buildShopSelectOptions() {
+        const currentSelected = shopSelect.value;
         shopSelect.innerHTML = '<option value="">-- 請選擇抄貨店家 --</option>';
         baseShops.forEach(shop => {
             const opt = document.createElement('option');
             opt.value = shop; opt.textContent = shop;
+            if(shop === currentSelected) opt.selected = true;
             shopSelect.appendChild(opt);
         });
         
-        shopSelect.addEventListener('change', () => {
+        // 綁定更新條碼規範看版的事件
+        const updateInfoPanel = () => {
             const shopName = shopSelect.value;
-            
-            // 當前選取店家時，從後台生成的下拉清單動態精準獲取條碼類別
             if(shopName) {
                 let currentBarcode = "店家條碼";
                 const rows = document.querySelectorAll('.barcode-rule-row');
@@ -402,16 +394,18 @@
                 } else {
                     shopDatabase[shopName].barcode = currentBarcode;
                 }
-            }
-            
-            const infoDetails = document.getElementById('infoDetails');
-            if(shopName) {
-                infoDetails.innerHTML = `🏷️ <b>條碼規範：</b>${shopDatabase[shopName].barcode || "店家條碼"}`;
+                document.getElementById('infoDetails').innerHTML = `🏷️ <b>條碼規範：</b>${shopDatabase[shopName].barcode || "店家條碼"}`;
             } else {
-                infoDetails.innerHTML = "<span style='color:#94a3b8;'>請先選取上方店家...</span>";
+                document.getElementById('infoDetails').innerHTML = "<span style='color:#94a3b8;'>請先選取上方店家...</span>";
             }
+        };
+
+        shopSelect.removeEventListener('change', shopSelect._changeHandler);
+        shopSelect._changeHandler = () => {
+            updateInfoPanel();
             renderMatrixTable();
-        });
+        };
+        shopSelect.addEventListener('change', shopSelect._changeHandler);
     }
 
     function renderMatrixTable() {
@@ -422,6 +416,14 @@
             return;
         }
 
+        // 店家結構安全初始防空
+        if (!shopDatabase[shopName]) {
+            shopDatabase[shopName] = { barcode: "店家條碼", suggestQty: {} };
+        }
+        if (!shopDatabase[shopName].suggestQty) {
+            shopDatabase[shopName].suggestQty = {};
+        }
+
         const groups = {};
         baseProducts.forEach(prod => {
             const gName = getProductGroup(prod);
@@ -430,13 +432,11 @@
         });
 
         const sortedGroupNames = Object.keys(groups).sort((a, b) => parseInt(a) - parseInt(b));
-
         let html = '';
         const colors = ['紫', '紅', '黑', '白'];
 
         sortedGroupNames.forEach(gName => {
             const prods = groups[gName];
-
             html += `
             <div class="group-container">
                 <div class="group-header-banner">
@@ -456,15 +456,16 @@
                     <tbody>`;
 
             prods.forEach(prod => {
-                html += `<tr>
-                    <td class="prod-name-td">${prod}</td>`;
+                html += `<tr><td class="prod-name-td">${prod}</td>`;
+
+                // 針對單一品項補全顏色防空上限
+                if (!shopDatabase[shopName].suggestQty[prod]) {
+                    shopDatabase[shopName].suggestQty[prod] = { '紫': 5, '紅': 5, '黑': 5, '白': 5 };
+                }
 
                 colors.forEach(c => {
                     const record = records.find(r => r.shop === shopName && r.baseName === prod && r.color === c);
                     const qtyVal = record ? record.qty : '';
-                    
-                    if(!shopDatabase[shopName].suggestQty) shopDatabase[shopName].suggestQty = {};
-                    if(!shopDatabase[shopName].suggestQty[prod]) shopDatabase[shopName].suggestQty[prod] = { '紫':5, '紅':5, '黑':5, '白':5 };
                     const limitNum = shopDatabase[shopName].suggestQty[prod][c] !== undefined ? shopDatabase[shopName].suggestQty[prod][c] : 5;
 
                     html += `
@@ -528,7 +529,7 @@
 
         saveAll();
         renderMatrixTable();
-        alert(`💾 已成功將整組【${groupName}】的「${color}色」建議上限一鍵同步更新為 ${num} 個！`);
+        alert(`💾 已成功將整組【${groupName}】的「${color}色」建議上限更新為 ${num} 個！`);
     }
 
     function updateQtyFromGrid(prod, color, value) {
@@ -583,13 +584,12 @@
 
     function updateUI() {
         if (records.length === 0) {
-            historyList.innerHTML = '<div class="empty-text">尚無 any 輸入數據</div>';
+            historyList.innerHTML = '<div class="empty-text">尚無任何輸入數據</div>';
             summaryList.innerHTML = '<div class="empty-text">暫無加總數據</div>';
             return;
         }
 
         const summaryByBarcode = {}; 
-
         records.forEach(r => {
             if (r.qty === 0 && !r.note) return; 
             if (r.qty > 0) {
@@ -623,7 +623,6 @@
             });
             summaryHtml += `</div>`;
         }
-
         summaryList.innerHTML = summaryHtml + '</div>';
 
         const shopGroups = {};
@@ -670,7 +669,7 @@
     }
 
     document.getElementById('exportBtn').addEventListener('click', () => {
-        if (records.length === 0) { alert('當前無 any 抄貨暫存數據！'); return; }
+        if (records.length === 0) { alert('當前無任何抄貨暫存數據！'); return; }
         const colors = ['紫', '紅', '黑', '白'];
         const shopList = [...new Set(records.map(r => r.shop))];
         let csvContent = "\uFEFF";
@@ -712,7 +711,7 @@
     });
 
     document.getElementById('copyBtn').addEventListener('click', () => {
-        if (records.length === 0) return alert('目前沒有 any 數據');
+        if (records.length === 0) return alert('目前沒有任何數據');
         const totalSummary = {}; 
         records.forEach(r => { if(r.qty > 0) totalSummary[r.name] = (totalSummary[r.name] || 0) + r.qty; });
         let text = "📋 【今日全店總備貨集中清單】\n";
@@ -730,18 +729,13 @@
         } 
     });
 
-    // 後台配置保存與連動更新
-        // 後台配置保存與連動更新
     document.getElementById('saveSettingsBtn').addEventListener('click', () => {
-        const oldProducts = [...baseProducts]; // 暫存舊的商品清單
+        const oldProducts = [...baseProducts]; 
         baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(p => p !== '');
         baseShops = shopsTextarea.value.split('\n').map(s => s.trim()).filter(s => s !== '');
         
-        // 【核心修正】同步更新 records 陣列中舊商品的 baseName 和 name，避免備貨清單與後台脫鉤
         records.forEach(r => {
-            // 尋找舊商品在陣列中的位置索引
             const oldIndex = oldProducts.indexOf(r.baseName);
-            // 如果找得到舊位置，且這個位置在新的商品清單內有對應的新名字
             if (oldIndex !== -1 && baseProducts[oldIndex]) {
                 const newBaseName = baseProducts[oldIndex];
                 if (r.baseName !== newBaseName) {
@@ -751,14 +745,9 @@
             }
         });
 
-        // 1. 自動讀取當前下拉選單最新設定並寫入本地及雲端
         saveAll(); 
-        // 2. 重新編排工作主頁店家的下拉選單
         buildShopSelectOptions();
-        // 3. 重新同步刷新後台第 3 點選單
         renderBarcodeRulesUI();
-        
-        // 【核心修正】強制前台網格與備貨清單即時同步刷新
         renderMatrixTable();
         updateUI();
 
