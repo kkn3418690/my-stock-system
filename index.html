@@ -92,7 +92,14 @@
     
     <div id="work-tab" class="tab-content active">
         <div class="card" style="padding: 10px; margin-bottom: 8px;">
-            <label for="shopSelect" style="font-size: 15px;">🏪 第一步：請選擇抄貨店家</label>
+            <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 6px;">
+                <label for="shopSelect" style="font-size: 15px; margin-bottom: 0; flex: 1;">🏪 第一步：請選擇抄貨店家</label>
+                
+                <button onclick="manualSyncGridToExcel()" style="background-color: #007AFF; color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 14px;">
+                    🔄 手動存檔今日抄貨 (第一區)
+                </button>
+            </div>
+            
             <select id="shopSelect" style="border: 2px solid var(--primary); font-weight: bold; color: var(--primary); margin-bottom: 6px;"></select>
             <div class="info-board" id="shopInfoBoard" style="margin-bottom:0;">
                 <div id="infoDetails"><span style='color:#94a3b8;'>請先選取上方店家，系統將自動加載該店專屬矩陣表格...</span></div>
@@ -104,7 +111,7 @@
         <div class="card">
             <h2>📝 當前已暫存抄貨明細統計</h2>
             <div id="historyList" style="max-height: 250px; overflow-y: auto;">
-                <div class="empty-text">尚無任何輸入數據</div>
+                <div class="empty-text">尚無 any 輸入數據</div>
             </div>
             <hr style="margin: 10px 0; border: 0; border-top: 1px solid #e2e8f0;">
             <button class="btn btn-success" id="exportBtn">🟢 儲存並導出當日補貨單 (CSV/Excel)</button>
@@ -209,6 +216,7 @@
         if (toast) toast.remove();
     }
 
+    // 💡 本來的自動存檔功能完全保留：用於自動同步更新分區二和分區三
     function saveAll() {
         const syncEl = document.getElementById('syncStatus');
         if(syncEl) { syncEl.innerHTML = "⏳ 正在即時同步資料至雲端 Excel..."; }
@@ -226,6 +234,7 @@
         const currentBarcodesString = barcodeRulesArray.join('\n');
 
         const payload = {
+            action: "autoSave", // 預設為自動背景更新
             records: records,
             config: {
                 products: productsTextarea.value,
@@ -261,13 +270,72 @@
         });
     }
 
+    // ✨ 全新新增：點擊手動按鈕時觸發，強迫將今天抄貨明細寫入 Excel 分區一的函數
+    async function manualSyncGridToExcel() {
+        if (records.length === 0) {
+            alert("⚠️ 目前網格中沒有任何抄貨數據，無法存檔歷史明細！");
+            return;
+        }
+
+        const btn = event.currentTarget;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.style.backgroundColor = "#6c757d";
+        btn.innerHTML = "⏳ 正在儲存至分區一...";
+
+        // 收集最新的條碼規範字串，確保打包資訊同步
+        let barcodeRulesArray = [];
+        document.querySelectorAll('.barcode-rule-row').forEach(row => {
+            const shop = row.querySelector('.barcode-select').getAttribute('data-shop');
+            const selectValue = row.querySelector('.barcode-select').value;
+            const customInputValue = row.querySelector('.custom-barcode-input').value.trim();
+            let finalRule = (selectValue === '其他') ? customInputValue : selectValue;
+            if (!finalRule) finalRule = "不需要條碼";
+            barcodeRulesArray.push(`${shop}|${finalRule}`);
+        });
+        const currentBarcodesString = barcodeRulesArray.join('\n');
+
+        const payload = {
+            action: "syncGrid", // ✨ 核心更動：告知後端寫入分區一
+            records: records,
+            config: {
+                products: productsTextarea.value,
+                shops: shopsTextarea.value,
+                barcodes: currentBarcodesString,
+                database: shopDatabase
+            }
+        };
+
+        try {
+            const response = await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { "Content-Type": "text/plain" },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json();
+            
+            if (result && result.status === "SUCCESS") {
+                alert("✅ " + result.message);
+            } else {
+                throw new Error(result.message || "後端寫入失敗");
+            }
+        } catch (error) {
+            console.error("手動同步失敗:", error);
+            alert("❌ 儲存至歷史分區一失敗，請檢查網路連線或稍後再試！");
+        } finally {
+            btn.disabled = false;
+            btn.style.backgroundColor = "#007AFF";
+            btn.innerHTML = originalText;
+        }
+    }
+
     function switchTab(tabId, activeBtn) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         activeBtn.classList.add('active');
         
-        // 修正：切換分頁時本地 UI 重新計算渲染即可，不盲目覆蓋拉取
         updateUI();
         if(tabId === 'work-tab') {
             renderMatrixTable();
@@ -374,7 +442,6 @@
             shopSelect.appendChild(opt);
         });
         
-        // 綁定更新條碼規範看版的事件
         const updateInfoPanel = () => {
             const shopName = shopSelect.value;
             if(shopName) {
@@ -416,7 +483,6 @@
             return;
         }
 
-        // 店家結構安全初始防空
         if (!shopDatabase[shopName]) {
             shopDatabase[shopName] = { barcode: "店家條碼", suggestQty: {} };
         }
@@ -458,7 +524,6 @@
             prods.forEach(prod => {
                 html += `<tr><td class="prod-name-td">${prod}</td>`;
 
-                // 針對單一品項補全顏色防空上限
                 if (!shopDatabase[shopName].suggestQty[prod]) {
                     shopDatabase[shopName].suggestQty[prod] = { '紫': 5, '紅': 5, '黑': 5, '白': 5 };
                 }
