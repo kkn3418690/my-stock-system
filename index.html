@@ -95,8 +95,8 @@
             <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 6px;">
                 <label for="shopSelect" style="font-size: 15px; margin-bottom: 0; flex: 1;">🏪 第一步：請選擇抄貨店家</label>
                 
-                <button onclick="manualSyncGridToExcel()" style="background-color: #007AFF; color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 14px;">
-                    🔄 手動存檔今日抄貨 (第一區)
+                <button onclick="manualSyncGridToExcel(event)" style="background-color: #007AFF; color: white; padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 14px;">
+                    🔄 手動存檔今日抄貨 
                 </button>
             </div>
             
@@ -269,9 +269,8 @@
             showSyncError('剛才的輸入「寫入失敗」！Excel 沒有存到，請檢查網路或重新整理。');
         });
     }
-
-    // ✨ 全新新增：點擊手動按鈕時觸發，強迫將今天抄貨明細寫入 Excel 分區一的函數
-    async function manualSyncGridToExcel() {
+        // ✨ 核心修復：替換原本的 manualSyncGridToExcel 函數
+    async function manualSyncGridToExcel(event) {
         if (records.length === 0) {
             alert("⚠️ 目前網格中沒有任何抄貨數據，無法存檔歷史明細！");
             return;
@@ -296,7 +295,7 @@
         const currentBarcodesString = barcodeRulesArray.join('\n');
 
         const payload = {
-            action: "syncGrid", // ✨ 核心更動：告知後端寫入分區一
+            action: "syncGrid", // ✨ 告知後端 GAS 執行寫入分區一的邏輯
             records: records,
             config: {
                 products: productsTextarea.value,
@@ -316,20 +315,21 @@
             const result = await response.json();
             
             if (result && result.status === "SUCCESS") {
+                // 彈出後端傳回的成功寫入行數與訊息
                 alert("✅ " + result.message);
             } else {
                 throw new Error(result.message || "後端寫入失敗");
             }
         } catch (error) {
             console.error("手動同步失敗:", error);
-            alert("❌ 儲存至歷史分區一失敗，請檢查網路連線或稍後再試！");
+            alert("❌ 儲存至歷史分區一失敗！\n原因：" + error.message + "\n請確認後端 GAS 代碼已同步更新並「建立新版本」重新部署。");
         } finally {
             btn.disabled = false;
             btn.style.backgroundColor = "#007AFF";
             btn.innerHTML = originalText;
         }
     }
-
+    
     function switchTab(tabId, activeBtn) {
         document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
         document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
