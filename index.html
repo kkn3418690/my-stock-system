@@ -191,6 +191,13 @@
     let records = []; 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxSbgSxS77eqqrTTJ_5TSRnDBPOi8HPssLOlZaKOIWPFxDZnMFns4_vFYuO2RfR6f5wQ/exec";
 
+    // ✨ 修正：補齊 JavaScript 缺少的 DOM 節點變數宣告
+    const shopSelect = document.getElementById('shopSelect');
+    const productsTextarea = document.getElementById('productsTextarea');
+    const shopsTextarea = document.getElementById('shopsTextarea');
+    const historyList = document.getElementById('historyList');
+    const summaryList = document.getElementById('summaryList');
+
     function getProductGroup(prodName) {
         return categoryMapping[prodName] || "12. 其它綜合配件類";
     }
@@ -216,7 +223,6 @@
         if (toast) toast.remove();
     }
 
-    // 💡 本來的自動存檔功能完全保留：用於自動同步更新分區二和分區三
     function saveAll() {
         const syncEl = document.getElementById('syncStatus');
         if(syncEl) { syncEl.innerHTML = "⏳ 正在即時同步資料至雲端 Excel..."; }
@@ -234,7 +240,7 @@
         const currentBarcodesString = barcodeRulesArray.join('\n');
 
         const payload = {
-            action: "autoSave", // 預設為自動背景更新
+            action: "autoSave",
             records: records,
             config: {
                 products: productsTextarea.value,
@@ -269,7 +275,7 @@
             showSyncError('剛才的輸入「寫入失敗」！Excel 沒有存到，請檢查網路或重新整理。');
         });
     }
-        // ✨ 核心修復：替換原本的 manualSyncGridToExcel 函數
+
     async function manualSyncGridToExcel(event) {
         if (records.length === 0) {
             alert("⚠️ 目前網格中沒有任何抄貨數據，無法存檔歷史明細！");
@@ -282,7 +288,6 @@
         btn.style.backgroundColor = "#6c757d";
         btn.innerHTML = "⏳ 正在儲存至分區一...";
 
-        // 收集最新的條碼規範字串，確保打包資訊同步
         let barcodeRulesArray = [];
         document.querySelectorAll('.barcode-rule-row').forEach(row => {
             const shop = row.querySelector('.barcode-select').getAttribute('data-shop');
@@ -295,7 +300,7 @@
         const currentBarcodesString = barcodeRulesArray.join('\n');
 
         const payload = {
-            action: "syncGrid", // ✨ 告知後端 GAS 執行寫入分區一的邏輯
+            action: "syncGrid",
             records: records,
             config: {
                 products: productsTextarea.value,
@@ -315,7 +320,6 @@
             const result = await response.json();
             
             if (result && result.status === "SUCCESS") {
-                // 彈出後端傳回的成功寫入行數與訊息
                 alert("✅ " + result.message);
             } else {
                 throw new Error(result.message || "後端寫入失敗");
