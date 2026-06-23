@@ -643,21 +643,33 @@ document.getElementById('btn-setting-tab').addEventListener('click', function() 
    ════════════════════════════════════════════ */
 function buildPayload(action) {
     const barcodeRulesArray = [];
-    document.querySelectorAll('.barcode-rule-row').forEach(row => {
-        const sel  = row.querySelector('.barcode-select');
-        const shop = sel.getAttribute('data-shop');
-        const selectValue = sel.value;
-        const customValue = row.querySelector('.custom-barcode-input').value.trim();
-        const finalRule = (selectValue === '其他') ? (customValue || '其他') : selectValue;
-        barcodeRulesArray.push(`${shop}|${finalRule}`);
-    });
+    // 修正：明確指定從後台設定的容器中抓取每一列的最新選擇
+    const rows = document.querySelectorAll('#barcodeRulesContainer .barcode-rule-row');
+    if (rows.length > 0) {
+        rows.forEach(row => {
+            const sel = row.querySelector('.barcode-select');
+            if (sel) {
+                const shop = sel.getAttribute('data-shop');
+                const selectValue = sel.value;
+                const customValue = row.querySelector('.custom-barcode-input').value.trim();
+                const finalRule = (selectValue === '其他') ? (customValue || '其他') : selectValue;
+                barcodeRulesArray.push(`${shop}|${finalRule}`);
+            }
+        });
+    } else {
+        // 如果容器還沒渲染（剛開網頁時），就沿用目前的原始資料
+        barcodeRulesArray.push(currentBarcodesRaw);
+    }
+    
+    const finalBarcodes = barcodeRulesArray.join('\n');
+    
     return {
         action,
         records,
         config: {
             products: productsTextarea.value,
             shops:    shopsTextarea.value,
-            barcodes: barcodeRulesArray.join('\n'),
+            barcodes: finalBarcodes,
             database: shopDatabase
         }
     };
@@ -1229,6 +1241,7 @@ document.getElementById('clearBtn').addEventListener('click', async () => {
 });
 
 /* ── 儲存後台設定 ── */
+/* ── 儲存後台設定 ── */
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
     const oldProducts = [...baseProducts];
     baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(Boolean);
@@ -1242,14 +1255,30 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
         }
     });
 
+    // 修正：儲存前，先將畫面上的最新條碼規則更新到全域變數 currentBarcodesRaw 中
+    const barcodeRulesArray = [];
+    document.querySelectorAll('#barcodeRulesContainer .barcode-rule-row').forEach(row => {
+        const sel = row.querySelector('.barcode-select');
+        if (sel) {
+            const shop = sel.getAttribute('data-shop');
+            const selectValue = sel.value;
+            const customValue = row.querySelector('.custom-barcode-input').value.trim();
+            const finalRule = (selectValue === '其他') ? (customValue || '...其他') : selectValue;
+            barcodeRulesArray.push(`${shop}|${finalRule}`);
+        }
+    });
+    if (barcodeRulesArray.length > 0) {
+        currentBarcodesRaw = barcodeRulesArray.join('\n');
+    }
+
+    // 執行同步與重新渲染
     saveAll();
     buildShopSelectOptions();
     renderBarcodeRulesUI();
     renderMatrixTable();
     updateUI();
-    showToast('💾 後台設定已儲存並同步！', 'success');
+    showToast('💾 後台設定已成功儲存並同步至雲端！', 'success');
 });
-
 /* ════════════════════════════════════════════
    啟動
    ════════════════════════════════════════════ */
