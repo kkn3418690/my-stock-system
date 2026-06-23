@@ -900,9 +900,15 @@ function renderMatrixTable() {
         // escape for HTML attr
         const gEsc = gName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
+        // --- 區塊 1：取代原本的 group-header-banner ---
         html += `<div class="group-container">
-            <div class="group-header-banner">
+                <div class="group-header-banner">
                 <span>📂 ${gName}</span>
+                <button type="button" class="btn-group-set" data-group="${gEsc}" 
+                        style="background: #ffffff; color: #334155; border: 1px solid #cbd5e1; 
+                               border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
+                    ⚙️ 設全組
+                </button>
             </div>
             <table class="matrix-table">
                 <colgroup>
@@ -957,6 +963,49 @@ function renderMatrixTable() {
 
     container.innerHTML = html;
 
+    // --- 區塊 2：新增事件綁定（請接在 container.innerHTML = html; 之後） ---
+
+    // 1. 綁定「設全組」按鈕 (11個群組獨立修改)
+    container.querySelectorAll('.btn-group-set').forEach(btn => {
+        btn.addEventListener('click', async function(e) {
+            e.stopPropagation();
+            const gName = this.dataset.group;
+            const shopName = shopSelect.value;
+            const val = await showPrompt(`設定整組上限`, `您正在設定群組：${gName}<br>此群組內所有商品的所有顏色上限將被統一修改。`, '6');
+            if (val === null) return;
+            const num = parseInt(val, 10);
+            if (isNaN(num) || num < 0) { showToast('請輸入有效數值', 'error'); return; }
+
+            baseProducts.forEach(prod => {
+                if (getProductGroup(prod) === gName) {
+                    if (!shopDatabase[shopName].suggestQty[prod]) shopDatabase[shopName].suggestQty[prod] = { '紫':5,'紅':5,'黑':5,'白':5 };
+                    COLORS.forEach(c => shopDatabase[shopName].suggestQty[prod][c] = num);
+                }
+            });
+            saveAll();
+            renderMatrixTable();
+            showToast(`✅ 已將群組「${gName}」全數設為 ${num}`, 'success');
+        });
+    });
+
+    // 2. 綁定「品名點擊」 (點擊品名修改該品項四個顏色)
+    container.querySelectorAll('.prod-name-td').forEach(td => {
+        td.style.cursor = 'pointer';
+        td.addEventListener('click', async function() {
+            const prod = this.textContent.trim();
+            const shopName = shopSelect.value;
+            const val = await showPrompt('修改單品全色系上限', `品項：${prod} <br>請輸入此品項四個顏色的統一上限值`, '6');
+            if (val === null) return;
+            const num = parseInt(val, 10);
+            if (isNaN(num) || num < 0) return;
+            
+            COLORS.forEach(c => shopDatabase[shopName].suggestQty[prod][c] = num);
+            saveAll();
+            renderMatrixTable();
+            showToast(`✅ ${prod} 全色系上限已更新`, 'success');
+        });
+    });
+    
     // 事件委派：數量輸入（oninput + debounce per cell）
     container.querySelectorAll('.matrix-qty-input').forEach(input => {
         let timer;
