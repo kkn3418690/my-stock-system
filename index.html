@@ -1038,7 +1038,7 @@ async function bulkEditGroupLimit(groupName, color) {
     const val = await showPrompt(
         `批次修改群組上限`,
         `群組：${groupName}<br>顏色：${color}色<br>請輸入全新上限值`,
-        '8'
+        '6'
     );
     if (val === null) return;
     const num = parseInt(val, 10);
