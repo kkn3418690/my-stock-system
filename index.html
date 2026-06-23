@@ -931,7 +931,14 @@ function renderMatrixTable() {
             if (!shopDatabase[shopName].suggestQty[prod]) {
                 shopDatabase[shopName].suggestQty[prod] = { '紫':5,'紅':5,'黑':5,'白':5 };
             }
-            html += `<tr><td class="prod-name-td">${prod}</td>`;
+                html += `<tr>
+                <td class="prod-name-td" style="position:relative;">
+                <span style="padding-right: 20px;">${prod}</span>
+                <span class="edit-icon" data-prod="${prod}" 
+                      style="position:absolute; right:2px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94a3b8; font-size:16px;">
+                      ⚙️
+                      </span>
+                      </td>`;
 
             COLORS.forEach(c => {
                 const rec      = records.find(r => r.shop === shopName && r.baseName === prod && r.color === c);
@@ -988,14 +995,16 @@ function renderMatrixTable() {
         });
     });
 
-    // 2. 綁定「品名點擊」 (點擊品名修改該品項四個顏色)
-    container.querySelectorAll('.prod-name-td').forEach(td => {
-        td.style.cursor = 'pointer';
-        td.addEventListener('click', async function() {
-            const prod = this.textContent.trim();
+    // --- 新增圖示點擊事件綁定 ---  // 綁定「品名設定圖示」點擊
+    container.querySelectorAll('.edit-icon').forEach(icon => {
+        icon.addEventListener('click', async function(e) {
+            e.stopPropagation(); // 防止觸發其他事件
+            const prod = this.dataset.prod;
             const shopName = shopSelect.value;
+            
             const val = await showPrompt('修改單品全色系上限', `品項：${prod} <br>請輸入此品項四個顏色的統一上限值`, '6');
             if (val === null) return;
+            
             const num = parseInt(val, 10);
             if (isNaN(num) || num < 0) return;
             
