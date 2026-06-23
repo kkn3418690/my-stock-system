@@ -389,6 +389,35 @@
             .grid-remark-input { width: 70px; font-size: 12px; }
             .prod-name-td { font-size: 12px; }
         }
+        
+        /* 鍵盤上方工具列 */
+        #quick-input-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 44px;
+            background: #f1f5f9;
+            display: none; /* 預設隱藏 */
+            z-index: 9999;
+            align-items: center;
+            padding: 0 5px;
+            overflow-x: auto;
+            white-space: nowrap;
+            border-top: 1px solid #cbd5e1;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.1);
+        }
+
+        .quick-btn {
+            padding: 6px 12px;
+            margin: 0 4px;
+            background: white;
+            border: 1px solid #94a3b8;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -469,6 +498,19 @@
 <!-- Modal 容器 -->
 <div id="modal-root"></div>
 
+<!-- 鍵盤上方工具列 -->
+    <div id="quick-input-bar">
+        <button class="quick-btn" onclick="insertText('換')">換</button>
+        <button class="quick-btn" onclick="insertText('退')">退</button>
+        <button class="quick-btn" onclick="insertText('紫')">紫</button>
+        <button class="quick-btn" onclick="insertText('紅')">紅</button>
+        <button class="quick-btn" onclick="insertText('黑')">黑</button>
+        <button class="quick-btn" onclick="insertText('白')">白</button>
+        <button class="quick-btn" onclick="insertText('1')">1</button>
+        <button class="quick-btn" onclick="insertText('2')">2</button>
+        <button class="quick-btn" onclick="insertText('3')">3</button>
+    </div>
+    
 <script>
 'use strict';
 
@@ -1348,10 +1390,42 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
     updateUI();
     showToast('💾 後台設定已成功儲存並同步至雲端！', 'success');
 });
-/* ════════════════════════════════════════════
-   啟動
-   ════════════════════════════════════════════ */
+
+let currentInput = null;
+const quickBar = document.getElementById('quick-input-bar');
+
+// 監聽輸入框的 focus 事件
+document.addEventListener('focusin', function(e) {
+    if (e.target.classList.contains('grid-remark-input')) {
+        currentInput = e.target;
+        quickBar.style.display = 'flex';
+    }
+});
+
+    // 監聽失去焦點
+document.addEventListener('focusout', function(e) {
+    // 延遲隱藏，避免點擊按鈕時輸入框先失去焦點導致無法輸入
+    setTimeout(() => {
+        if (!document.activeElement.classList.contains('quick-btn')) {
+            quickBar.style.display = 'none';
+        }
+    }, 200);
+});
+
+// 插入文字的函式
+function insertText(text) {
+    if (!currentInput) return;
+    const start = currentInput.selectionStart;
+    const end = currentInput.selectionEnd;
+    const val = currentInput.value;
+    currentInput.value = val.substring(0, start) + text + val.substring(end);
+    currentInput.focus();
+    currentInput.selectionStart = currentInput.selectionEnd = start + text.length;
+    currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+/* 啟動系統 */
 loadSystem();
+    
 </script>
 </body>
 </html>
