@@ -771,7 +771,16 @@ document.getElementById('manualSyncBtn').addEventListener('click', async functio
         const res = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(buildPayload('syncGrid'))
+            body: JSON.stringify({
+                action: "saveHistory", // <--- 確保這行存在
+                records: records,
+                config: {
+                    products: productsTextarea.value,
+                    shops: shopsTextarea.value,
+                    barcodes: currentBarcodesRaw,
+                    database: shopDatabase
+                }
+            })
         });
         const data = await res.json();
         if (data && data.status === 'SUCCESS') {
@@ -1364,12 +1373,13 @@ document.getElementById('clearBtn').addEventListener('click', async () => {
 });
 
 /* ── 儲存後台設定 ── */
-/* ── 儲存後台設定 ── */
 document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+    // 1. 更新內部變數
     const oldProducts = [...baseProducts];
     baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(Boolean);
     baseShops    = shopsTextarea.value.split('\n').map(s => s.trim()).filter(Boolean);
 
+    // 更新 records (處理品項名稱變更)
     records.forEach(r => {
         const oldIdx = oldProducts.indexOf(r.baseName);
         if (oldIdx !== -1 && baseProducts[oldIdx] && r.baseName !== baseProducts[oldIdx]) {
@@ -1378,7 +1388,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
         }
     });
 
-    // 修正：儲存前，先將畫面上的最新條碼規則更新到全域變數 currentBarcodesRaw 中
+    // 2. 獲取最新條碼規則
     const barcodeRulesArray = [];
     document.querySelectorAll('#barcodeRulesContainer .barcode-rule-row').forEach(row => {
         const sel = row.querySelector('.barcode-select');
@@ -1390,17 +1400,40 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
             barcodeRulesArray.push(`${shop}|${finalRule}`);
         }
     });
-    if (barcodeRulesArray.length > 0) {
-        currentBarcodesRaw = barcodeRulesArray.join('\n');
-    }
+    if (barcodeRulesArray.length > 0) currentBarcodesRaw = barcodeRulesArray.join('\n');
 
-    // 執行同步與重新渲染
-    saveAll();
+    // 3. 【關鍵修改】發送請求給後端，指定 action 為 "saveSettings"
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+            action: "saveSettings", 
+            config: {
+                products: productsTextarea.value,
+                shops:    shopsTextarea.value,
+                barcodes: currentBarcodesRaw,
+                database: shopDatabase
+            }
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'SUCCESS') {
+            showToast('💾 後台設定已成功儲存至雲端！', 'success');
+        } else {
+            showToast('❌ 設定儲存失敗：' + data.message, 'error');
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        showToast('❌ 連線錯誤，請檢查網路', 'error');
+    });
+
+    // 4. 重新渲染畫面
     buildShopSelectOptions();
     renderBarcodeRulesUI();
     renderMatrixTable();
     updateUI();
-    showToast('💾 後台設定已成功儲存並同步至雲端！', 'success');
 });
 
 let currentInput = null;
