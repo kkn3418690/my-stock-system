@@ -1,0 +1,218 @@
+// ==========================================
+// 後端 GAS 核心控制程式
+// ==========================================
+
+function doGet(e) {
+  return ContentService
+    .createTextOutput(JSON.stringify(readFromExcel()))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doPost(e) {
+  try {
+    var postData = JSON.parse(e.postData.contents || "{}");
+    var action = postData.action || "";
+
+    if (action === "syncGrid") {
+
+      var result = writeToHistoryZone1(
+        postData.records || [],
+        postData.config || {}
+      );
+
+      return ContentService
+        .createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
+
+    } else {
+
+      saveToExcel(
+        postData.records || [],
+        postData.config || {}
+      );
+
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          status: "SUCCESS",
+          message: "自動暫存成功"
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+  } catch (error) {
+
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        status: "ERROR",
+        message: error.toString()
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  }
+}
+
+
+// ==========================================
+// 讀取 Excel 配置與暫存資料
+// ==========================================
+function readFromExcel() {
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  var products = sheet.getRange("J5").getValue();
+  var shops = sheet.getRange("K5").getValue();
+  var barcodes = sheet.getRange("L5").getValue();
+
+  var dbString = sheet.getRange("M5").getValue();
+
+  var database = {};
+
+  if (dbString) {
+    try {
+      database = JSON.parse(dbString);
+    } catch (e) {}
+  }
+
+  var records = [];
+
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow >= 5) {
+
+    var values = sheet.getRange("O5:V" + lastRow).getValues();
+
+    for (var i = 0; i < values.length; i++) {
+
+      if (values[i][0]) {
+
+        records.push({
+          id: values[i][0].toString(),
+          shop: values[i][1].toString(),
+          name: values[i][2].toString(),
+          baseName: values[i][3].toString(),
+          color: values[i][4].toString(),
+          qty: parseInt(values[i][5]) || 0,
+          isReturn: values[i][6] === true || values[i][6] === "true",
+          note: values[i][7] ? values[i][7].toString() : ""
+        });
+
+      }
+
+    }
+  }
+
+  return {
+    records: records,
+    config: {
+      products: products,
+      shops: shops,
+      barcodes: barcodes,
+      database: database
+    }
+  };
+}
+
+
+// ==========================================
+// 自動暫存到分區三
+// ==========================================
+function saveToExcel(records, config) {
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+
+  sheet.getRange("J5").setValue(config.products || "");
+  sheet.getRange("K5").setValue(config.shops || "");
+  sheet.getRange("L5").setValue(config.barcodes || "");
+  sheet.getRange("M5").setValue(JSON.stringify(config.database || {}));
+
+  var lastRow = sheet.getLastRow();
+
+  if (lastRow >= 5) {
+    sheet.getRange("O5:V" + lastRow).clearContent();
+  }
+
+  if (records && records.length > 0) {
+
+    var rows = [];
+
+    records.forEach(function (r) {
+
+      rows.push([
+        r.id || "",
+        r.shop || "",
+        r.name || "",
+        r.baseName || "",
+        r.color || "",
+        r.qty || 0,
+        r.isReturn || false,
+        r.note || ""
+      ]);
+
+    });
+
+    sheet.getRange(5, 15, rows.length, 8).setValues(rows);
+  }
+
+}
+
+
+// ==========================================
+// 寫入分區一歷史區
+// ==========================================
+function writeToHistoryZone1(records, config) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  saveToExcel(records, config);
+
+  var validRecords = records.filter(function (r) {
+    return (r.qty > 0) || (r.note && r.note.toString().trim() !== "");
+  });
+
+  if (validRecords.length === 0) {
+    return { status: "ERROR", message: "沒有資料可寫入" };
+  }
+
+  // --- 關鍵：只根據收到的 ID 來清除舊資料，不限日期 ---
+  var incomingIds = validRecords.map(function(r) { return r.id; });
+  var lastRow = sheet.getLastRow();
+  
+  if (lastRow >= 5) {
+    // 假設歷史紀錄的 ID 在第 8 欄 (Index 7)
+    var data = sheet.getRange(5, 1, lastRow - 4, 8).getValues();
+    for (var i = data.length - 1; i >= 0; i--) {
+      // data[i][7] 是歷史區的 ID 欄位
+      if (incomingIds.indexOf(data[i][7]) > -1) {
+        sheet.deleteRow(i + 5);
+      }
+    }
+  }
+
+  // 重新寫入最新的紀錄 (邏輯不變)
+  var barcodeMap = {};
+  if (config.barcodes) {
+    config.barcodes.split("\n").forEach(function(line) {
+      if (line.indexOf("|") > -1) {
+        var parts = line.split("|");
+        barcodeMap[parts[0].trim()] = parts[1].trim();
+      }
+    });
+  }
+
+  var historyRows = [];
+  validRecords.forEach(function (r) {
+    historyRows.push([
+      r.id.split('_')[0], // 把 ID 的第一部分(日期)重新拆出來當日期欄
+      r.shop,
+      barcodeMap[r.shop] || "店家條碼",
+      r.baseName,
+      r.color + "色",
+      r.qty,
+      r.note || "",
+      r.id,
+      r.timestamp || new Date().toLocaleString()
+    ]);
+  });
+
+  sheet.getRange(sheet.getLastRow() + 1, 1, historyRows.length, 9).setValues(historyRows);
+
+  return { status: "SUCCESS", message: "資料已成功更新 (跨天覆蓋模式)" };
+}
