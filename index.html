@@ -1162,25 +1162,29 @@ async function bulkEditGroupLimit(groupName, color) {
     showToast(`✅ 整組「${groupName}」${color}色上限已更新為 ${num}`, 'success', 2500);
 }
 
-/* ════════════════════════════════════════════
-   數量 & 備註更新
-   ════════════════════════════════════════════ */
+// 在前端 JavaScript 中修改此函數
 function updateQtyFromGrid(prod, color, value) {
     const shopName = shopSelect.value;
     if (!shopName) return;
     const qty = parseInt(value, 10);
     const existingNote = getSavedNoteValue(shopName, prod);
+    
+    // 移除舊紀錄並新增一筆帶有固定ID的紀錄
     records = records.filter(r => !(r.shop === shopName && r.baseName === prod && r.color === color));
-    if (!isNaN(qty) && qty > 0) {
+    
+    if (!isNaN(qty) && qty > 0 || existingNote) {
         records.push({
-            id: crypto.randomUUID(),
+            // 這裡使用店家+品項+顏色作為固定 ID
+            id: `${shopName}_${prod}_${color}`, 
             shop: shopName,
             name: `[${color}] ${prod}`,
             baseName: prod,
             color,
             qty,
             isReturn: false,
-            note: existingNote
+            note: existingNote,
+            // 增加時間戳
+            timestamp: new Date().toLocaleString("zh-TW", {timeZone: "Asia/Taipei"})
         });
     }
     saveAll();
