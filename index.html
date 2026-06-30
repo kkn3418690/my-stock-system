@@ -1162,20 +1162,23 @@ async function bulkEditGroupLimit(groupName, color) {
     showToast(`✅ 整組「${groupName}」${color}色上限已更新為 ${num}`, 'success', 2500);
 }
 
-// 在前端 JavaScript 中修改此函數
+// 修改 updateQtyFromGrid 內的 ID 生成部分
 function updateQtyFromGrid(prod, color, value) {
     const shopName = shopSelect.value;
     if (!shopName) return;
     const qty = parseInt(value, 10);
     const existingNote = getSavedNoteValue(shopName, prod);
     
-    // 移除舊紀錄並新增一筆帶有固定ID的紀錄
-    records = records.filter(r => !(r.shop === shopName && r.baseName === prod && r.color === color));
+    // --- 產生「日期_店家_品名_顏色」的唯一 ID ---
+    const todayStr = new Date().toISOString().split('T')[0]; 
+    const uniqueId = `${todayStr}_${shopName}_${prod}_${color}`;
+    
+    // 移除舊紀錄 (篩選時改比對 ID)
+    records = records.filter(r => r.id !== uniqueId);
     
     if (!isNaN(qty) && qty > 0 || existingNote) {
         records.push({
-            // 這裡使用店家+品項+顏色作為固定 ID
-            id: `${shopName}_${prod}_${color}`, 
+            id: uniqueId, // 使用含日期的 ID
             shop: shopName,
             name: `[${color}] ${prod}`,
             baseName: prod,
@@ -1183,7 +1186,6 @@ function updateQtyFromGrid(prod, color, value) {
             qty,
             isReturn: false,
             note: existingNote,
-            // 增加時間戳
             timestamp: new Date().toLocaleString("zh-TW", {timeZone: "Asia/Taipei"})
         });
     }
