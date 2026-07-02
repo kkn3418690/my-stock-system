@@ -1,113 +1,147 @@
 // ==========================================
 // 後端 GAS 完整架構程式 (已調整存檔邏輯)
 // ==========================================
+// 定義分頁名稱，方便未來修改
+var SHEET_NAMES = {
+  HISTORY: "歷史訂單",
+  TEMP: "線上資料佔存區",
+  SETTINGS: "後台資料"
+};
 
 function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  return ContentService
-    .createTextOutput(JSON.stringify(readAllData(sheet)))
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ContentService.createTextOutput(JSON.stringify(readAllData(ss)))
     .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
   try {
-    var postData = JSON.parse(e.postData.contents);
-    var action = postData.action;
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var postData = JSON.parse(e.postData.contents || "{}");
+    var action = postData.action || "";
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
 
     if (action === "saveHistory") {
-      // 區域 1：只處理歷史，不呼叫 saveToTempZone
-      return ContentService.createTextOutput(JSON.stringify(writeToHistoryZone(sheet, postData.records, postData.config))).setMimeType(ContentService.MimeType.JSON);
+      // 指定寫入「歷史訂單」頁
+      var sheet = ss.getSheetByName(SHEET_NAMES.HISTORY);
+      var result = writeToHistoryZone(sheet, postData.records || [], postData.config || {});
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+
     } else if (action === "saveSettings") {
-      // 區域 2：只更新設定
-      return ContentService.createTextOutput(JSON.stringify(updateSettingsZone(sheet, postData.config))).setMimeType(ContentService.MimeType.JSON);
+      // 指定寫入「後台資料」頁
+      var sheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+      var result = updateSettingsZone(sheet, postData.config || {});
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+
     } else {
-      // 區域 3：暫存區更新 (自動存檔用)
-      saveToTempZone(sheet, postData.records);
-      return ContentService.createTextOutput(JSON.stringify({status: "SUCCESS"})).setMimeType(ContentService.MimeType.JSON);
+      // 指定寫入「線上資料佔存區」頁
+      var sheet = ss.getSheetByName(SHEET_NAMES.TEMP);
+      saveToTempZone(sheet, postData.records || []);
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "SUCCESS", 
+        message: "自動暫存成功"
+      })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({status: "ERROR", message: error.toString()})).setMimeType(ContentService.MimeType.JSON);
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "ERROR", 
+      message: error.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
 // ---------------- 核心功能 ----------------
+function readAllData(ss) {
+  var sheetSettings = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+  var sheetTemp = ss.getSheetByName(SHEET_NAMES.TEMP);
 
-function readAllData(sheet) {
-  var products = sheet.getRange("J5").getValue();
-  var shops = sheet.getRange("K5").getValue();
-  var barcodes = sheet.getRange("L5").getValue();
-  var dbString = sheet.getRange("M5").getValue();
-  var database = dbString ? JSON.parse(dbString) : {};
+  // 1. 從設定頁抓取 J2:M2
+  var config = {
+    products: sheetSettings.getRange("J2").getValue(),
+    shops: sheetSettings.getRange("K2").getValue(),
+    barcodes: sheetSettings.getRange("L2").getValue(),
+    database: JSON.parse(sheetSettings.getRange("M2").getValue() || "{}")
+  };
 
-  var lastRow = sheet.getLastRow();
+  // 2. 從暫存頁 (線上資料佔存區) 抓取記錄
+  var lastRow = sheetTemp.getLastRow();
   var records = [];
+  
   if (lastRow >= 5) {
-    var values = sheet.getRange("O5:V" + lastRow).getValues();
+    // 假設暫存區數據是從 O5 到 V 欄
+    var values = sheetTemp.getRange("O5:V" + lastRow).getValues();
     values.forEach(function(row) {
-      if (row[0]) {
+      if (row[0]) { // 確保 ID 欄位有值
         records.push({
-          id: row[0], shop: row[1], name: row[2], baseName: row[3],
-          color: row[4], qty: row[5], isReturn: row[6], note: row[7]
+          id: row[0], 
+          shop: row[1], 
+          name: row[2], 
+          baseName: row[3],
+          color: row[4], 
+          qty: row[5], 
+          isReturn: row[6], 
+          note: row[7]
         });
       }
     });
   }
-
-  return { records: records, config: { products: products, shops: shops, barcodes: barcodes, database: database } };
+  
+  return { records: records, config: config };
 }
 
-// 區域 1：歷史記錄處理 (已斷開與暫存區的連動)
+// 區域 1：歷史記錄同步 (今日數據去重後寫入，歷史資料不受影響)
 function writeToHistoryZone(sheet, records, config) {
-  console.log("收到資料數量: " + records.length);
+  // 1. 只過濾有效的資料 (數量 > 0 或有備註)
   var validRecords = records.filter(r => r.qty > 0 || (r.note && r.note.trim() !== ""));
   if (validRecords.length === 0) return { status: "ERROR", message: "沒有資料可寫入" };
 
-  var incomingIds = validRecords.map(r => r.id);
-  var lastRow = sheet.getLastRow();
-  
-  if (lastRow >= 5) {
-    var historyData = sheet.getRange(5, 1, lastRow - 4, 9).getValues();
-    for (var i = historyData.length - 1; i >= 0; i--) {
-      if (incomingIds.indexOf(historyData[i][7]) > -1) {
-        sheet.deleteRow(i + 5);
-      }
-    }
-  }
-
+  // 2. 解析條碼映射
   var barcodeMap = {};
   if (config.barcodes) {
     config.barcodes.split("\n").forEach(line => {
-      var parts = line.split("|");
-      if (parts.length > 1) barcodeMap[parts[0].trim()] = parts[1].trim();
+      var p = line.split("|");
+      if (p.length > 1) barcodeMap[p[0].trim()] = p.length > 2 ? p[2].trim() : p[1].trim(); 
     });
   }
 
+  // 3. 準備寫入的資料列 (直接組裝，不比對任何舊資料)
+  var today = new Date().toLocaleDateString();
   var rows = validRecords.map(r => [
-    r.id.split('_')[0], r.shop, barcodeMap[r.shop] || "店家條碼", 
-    r.baseName, r.color + "色", r.qty, r.note || "", r.id, new Date().toLocaleString()
+    today, 
+    r.shop, 
+    r.name, 
+    r.qty, 
+    barcodeMap[r.shop] || "無", 
+    r.qty, 
+    r.note || "", 
+    r.id, 
+    "已抄貨"
   ]);
+
+  // 4. 直接寫入最後一行之後
+  var lastRow = sheet.getLastRow();
+  // 若小於第 5 行，則從第 5 行開始寫
+  var startRow = Math.max(lastRow + 1, 5);
   
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, 9).setValues(rows);
-  return { status: "SUCCESS", message: "歷史紀錄已更新，暫存區維持原狀" };
+  sheet.getRange(startRow, 1, rows.length, 9).setValues(rows);
+
+  return { status: "SUCCESS", message: "測試寫入完成，已直接追加到表格末端" };
 }
 
-// 區域 2：設定區
-function updateSettingsZone(sheet, config) {
-  sheet.getRange("J5").setValue(config.products);
-  sheet.getRange("K5").setValue(config.shops);
-  sheet.getRange("L5").setValue(config.barcodes);
-  sheet.getRange("M5").setValue(JSON.stringify(config.database));
-  return { status: "SUCCESS" };
-}
-
-// 區域 3：暫存區
+// 區域 2：暫存區同步
 function saveToTempZone(sheet, records) {
   var lastRow = sheet.getLastRow();
-  if (lastRow >= 5) sheet.getRange("O5:V" + lastRow).clearContent();
-  
-  if (records && records.length > 0) {
+  if (lastRow >= 5) sheet.getRange("O5:V" + Math.max(lastRow, 5)).clearContent();
+  if (records.length > 0) {
     var rows = records.map(r => [r.id, r.shop, r.name, r.baseName, r.color, r.qty, r.isReturn, r.note]);
     sheet.getRange(5, 15, rows.length, 8).setValues(rows);
   }
+}
+
+// 區域 3：後台設定
+function updateSettingsZone(sheet, config) {
+  sheet.getRange("J2").setValue(config.products);
+  sheet.getRange("K2").setValue(config.shops);
+  sheet.getRange("L2").setValue(config.barcodes);
+  sheet.getRange("M2").setValue(JSON.stringify(config.database));
+  return { status: "SUCCESS" };
 }
