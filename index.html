@@ -1402,38 +1402,32 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
     });
     if (barcodeRulesArray.length > 0) currentBarcodesRaw = barcodeRulesArray.join('\n');
 
-    // 3. 準備發送給後端的資料
-    const payload = {
-        action: "saveSettings", 
-        config: {
-            products: productsTextarea.value,
-            shops:    shopsTextarea.value,
-            barcodes: currentBarcodesRaw,
-            database: shopDatabase || {} // 確保資料存在，沒有就給空物件
-        }
-    };
-
-    console.log("正在發送以下設定資料:", payload); // 這行可以讓你按 F12 在 Console 看到結果
-
-    // 4. 發送請求
+    // 3. 【關鍵修改】發送請求給後端，指定 action 為 "saveSettings"
     fetch(SCRIPT_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }, // 修改這裡，讓後端更好解析
-        body: JSON.stringify(payload)
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+            action: "saveSettings", 
+            config: {
+                products: productsTextarea.value,
+                shops:    shopsTextarea.value,
+                barcodes: currentBarcodesRaw,
+                database: shopDatabase
+            }
+        })
     })
-    .then(response => response.json())
-    .then(result => {
-        if (result.status === "SUCCESS") {
-            alert("設定已成功同步至雲端！");
+    .then(res => res.json())
+    .then(data => {
+        if(data.status === 'SUCCESS') {
+            showToast('💾 後台設定已成功儲存至雲端！', 'success');
         } else {
-            alert("後端回報錯誤: " + result.message);
+            showToast('❌ 設定儲存失敗：' + data.message, 'error');
         }
     })
-    .catch(error => {
-        console.error("錯誤:", error);
-        alert("儲存失敗，請檢查網路連線或重新部署");
+    .catch(err => {
+        console.error(err);
+        showToast('❌ 連線錯誤，請檢查網路', 'error');
     });
-});
 
     // 4. 重新渲染畫面
     buildShopSelectOptions();
