@@ -903,17 +903,14 @@ function handleShopChange() {
     renderMatrixTable();
 }
 
+// 建議改為確保每次都重新遍歷 DOM 獲取最新狀態
 function getShopBarcode(shopName) {
-    let barcode = '店家條碼';
-    document.querySelectorAll('.barcode-rule-row').forEach(row => {
-        const sel = row.querySelector('.barcode-select');
-        if (sel.getAttribute('data-shop') === shopName) {
-            const v = sel.value;
-            const custom = row.querySelector('.custom-barcode-input').value.trim();
-            barcode = (v === '其他') ? (custom || '其他') : v;
-        }
-    });
-    return barcode;
+    const row = Array.from(document.querySelectorAll('.barcode-rule-row'))
+                     .find(r => r.querySelector('.barcode-select').getAttribute('data-shop') === shopName);
+    if (!row) return '店家條碼'; // 預設值
+    const select = row.querySelector('.barcode-select');
+    const custom = row.querySelector('.custom-barcode-input');
+    return (select.value === '其他') ? (custom.value.trim() || '其他') : select.value;
 }
 
 function updateShopInfoPanel() {
