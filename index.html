@@ -702,7 +702,6 @@ document.getElementById('btn-setting-tab').addEventListener('click', function() 
    ════════════════════════════════════════════ */
 function buildPayload(action) {
     const barcodeRulesArray = [];
-    // 修正：明確指定從後台設定的容器中抓取每一列的最新選擇
     const rows = document.querySelectorAll('#barcodeRulesContainer .barcode-rule-row');
     if (rows.length > 0) {
         rows.forEach(row => {
@@ -716,15 +715,14 @@ function buildPayload(action) {
             }
         });
     } else {
-        // 如果容器還沒渲染（剛開網頁時），就沿用目前的原始資料
         barcodeRulesArray.push(currentBarcodesRaw);
     }
     
     const finalBarcodes = barcodeRulesArray.join('\n');
     
     return {
-        action,
-        records,
+        action: action, // 確保 action 有確實帶入 ("saveHistory", "saveSettings", 或自動暫存)
+        records: records,
         config: {
             products: productsTextarea.value,
             shops:    shopsTextarea.value,
@@ -733,7 +731,7 @@ function buildPayload(action) {
         }
     };
 }
-
+    
 function saveAll() {
     clearTimeout(syncTimer);
     syncTimer = setTimeout(() => {
@@ -771,20 +769,11 @@ document.getElementById('manualSyncBtn').addEventListener('click', async functio
         const res = await fetch(SCRIPT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-                action: "saveHistory", // <--- 確保這行存在
-                records: records,
-                config: {
-                    products: productsTextarea.value,
-                    shops: shopsTextarea.value,
-                    barcodes: currentBarcodesRaw,
-                    database: shopDatabase
-                }
-            })
+            body: JSON.stringify(buildPayload('saveHistory')) // 必須傳入 'saveHistory'
         });
         const data = await res.json();
         if (data && data.status === 'SUCCESS') {
-            showToast('✅ ' + (data.message || '今日抄貨已成功儲存至分區！'), 'success');
+            showToast('✅ ' + (data.message || '今日抄貨已成功儲存！'), 'success');
         } else {
             throw new Error(data.message || '後端寫入失敗');
         }
@@ -806,7 +795,7 @@ function loadSystem() {
         .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
         .then(data => {
             if (data && data.records) {
-                records      = data.records;
+                records      = data.records || [];
                 shopDatabase = data.config.database || {};
                 productsTextarea.value = data.config.products || defaultProducts.join('\n');
                 shopsTextarea.value    = data.config.shops    || defaultShops.join('\n');
@@ -826,7 +815,6 @@ function loadSystem() {
         })
         .catch(err => {
             console.error('loadSystem error:', err);
-            // 離線降級：使用預設值
             productsTextarea.value = defaultProducts.join('\n');
             shopsTextarea.value    = defaultShops.join('\n');
             currentBarcodesRaw     = defaultBarcodes.join('\n');
@@ -837,7 +825,6 @@ function loadSystem() {
             renderMatrixTable();
             updateUI();
             setSyncStatus('error', '❌ 無法載入線上資料（離線模式）');
-            showToast('⚠️ 雲端讀取失敗，已切換為離線模式。請檢查網路。', 'warning', 6000);
         });
 }
 
