@@ -1113,6 +1113,21 @@ function getSavedNoteValue(shop, prod) {
     return found ? found.note : '';
 }
 
+function getBarcodeRuleOrder() {
+    const order = [];
+    const seen = new Set();
+    currentBarcodesRaw.split('\n').forEach(line => {
+        const separator = line.indexOf('|');
+        if (separator < 0) return;
+        const rule = line.slice(separator + 1).trim();
+        if (rule && !seen.has(rule)) {
+            seen.add(rule);
+            order.push(rule);
+        }
+    });
+    return order;
+}
+
 /* ════════════════════════════════════════════
    上限編輯（使用自訂 Modal 替代 prompt）
    ════════════════════════════════════════════ */
@@ -1230,9 +1245,18 @@ function updateUI() {
         if (!summaryByBarcode[bType]) summaryByBarcode[bType] = {};
         summaryByBarcode[bType][r.name] = (summaryByBarcode[bType][r.name] || 0) + r.qty;
     });
+    const barcodeRuleOrder = getBarcodeRuleOrder();
+    const sortedBarcodeEntries = Object.entries(summaryByBarcode).sort(([firstRule], [secondRule]) => {
+        const firstIndex = barcodeRuleOrder.indexOf(firstRule);
+        const secondIndex = barcodeRuleOrder.indexOf(secondRule);
+        if (firstIndex < 0 && secondIndex < 0) return firstRule.localeCompare(secondRule, 'zh-Hant');
+        if (firstIndex < 0) return 1;
+        if (secondIndex < 0) return -1;
+        return firstIndex - secondIndex;
+    });
 
     let summaryHtml = '<div style="display:flex; flex-direction:column; gap:10px;">';
-    for (const [bType, items] of Object.entries(summaryByBarcode)) {
+    for (const [bType, items] of sortedBarcodeEntries) {
         summaryHtml += `<div style="border:1px solid var(--border); padding:10px; border-radius:8px; background:#fff;">
             <h3 style="font-size:13px; color:#ea580c; margin-bottom:8px; border-bottom:2px solid #ea580c; padding-bottom:4px;">🏷️ 條碼規範：${bType}</h3>`;
         baseProducts.forEach(baseName => {
