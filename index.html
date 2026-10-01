@@ -253,6 +253,22 @@
         }
         .shop-title { font-weight: 700; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px; font-size: 13px; }
 
+        .history-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+        .history-filters label { font-size: 12px; }
+        .history-filters input, .history-filters select { margin-bottom: 0; }
+        .history-shop-options { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; background: #f8fafc; }
+        .history-shop-option { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+        .history-shop-option:last-child { border-bottom: 0; }
+        .history-shop-option input { width: 18px; height: 18px; margin: 0; accent-color: var(--primary); }
+        .history-shop-option label { flex: 1; margin: 0; font-weight: 500; }
+        .history-results-wrap { overflow-x: auto; }
+        .history-results-table { width: 100%; border-collapse: collapse; min-width: 620px; }
+        .history-results-table th, .history-results-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+        .history-results-table th { background: #f8fafc; color: var(--text-muted); font-size: 12px; position: sticky; top: 0; }
+        .history-results-table td { font-size: 13px; }
+        .history-total { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
+        .history-loading { color: var(--info); }
+
         /* ── 按鈕 ── */
         .btn {
             display: block;
@@ -384,10 +400,12 @@
 
         /* ── 響應式 ── */
         @media (max-width: 500px) {
-            .tab-btn { font-size: 12px; padding: 8px 2px; }
+            .tabs { overflow-x: auto; }
+            .tab-btn { flex: 0 0 auto; min-width: 68px; font-size: 11px; padding: 8px 3px; }
             .matrix-qty-input { width: 44px; height: 38px; font-size: 16px; }
             .grid-remark-input { width: 70px; font-size: 12px; }
             .prod-name-td { font-size: 12px; }
+            .history-filters { grid-template-columns: 1fr; }
         }
         
         /* 鍵盤上方工具列 */
@@ -427,6 +445,8 @@
     <div class="tabs">
         <button type="button" class="tab-btn active" id="btn-work-tab">📝 智慧抄貨</button>
         <button type="button" class="tab-btn" id="btn-summary-tab">📦 備貨清單</button>
+        <button type="button" class="tab-btn" id="btn-delivery-tab">🚚 送貨</button>
+        <button type="button" class="tab-btn" id="btn-history-tab">🧾 歷史訂單</button>
         <button type="button" class="tab-btn" id="btn-setting-tab">⚙️ 後台設定</button>
     </div>
 
@@ -469,6 +489,45 @@
                 <button type="button" id="copyBtn" class="icon-btn" style="background:#e2e8f0; color:#334155; font-size:13px; padding:6px 10px;">📋 複製文字</button>
             </div>
             <div id="summaryList"><div class="empty-text">暫無加總數據</div></div>
+        </div>
+    </div>
+
+    <div id="delivery-tab" class="tab-content"></div>
+
+    <div id="history-tab" class="tab-content">
+        <h1>🧾 歷史訂單查詢</h1>
+        <div class="card">
+            <div class="history-filters">
+                <div>
+                    <label for="historyStartDate">開始日期（留白不限）</label>
+                    <input id="historyStartDate" type="date">
+                </div>
+                <div>
+                    <label for="historyEndDate">結束日期（留白不限）</label>
+                    <input id="historyEndDate" type="date">
+                </div>
+                <div>
+                    <label for="historyShopMode">店家範圍</label>
+                    <select id="historyShopMode">
+                        <option value="all">全部店家</option>
+                        <option value="single">單一店家</option>
+                        <option value="multiple">複選店家</option>
+                    </select>
+                </div>
+                <div id="historySingleShopWrap" hidden>
+                    <label for="historySingleShop">選擇店家</label>
+                    <select id="historySingleShop"></select>
+                </div>
+            </div>
+            <div id="historyMultipleShopsWrap" style="display:none; margin-top:10px;">
+                <label>選擇店家（可複選）</label>
+                <div id="historyMultipleShops" class="history-shop-options"></div>
+            </div>
+            <button type="button" id="historySearchBtn" class="btn btn-info" style="margin-top:12px;">🔎 查詢雲端歷史訂單</button>
+        </div>
+        <div class="card">
+            <div id="historyQuerySummary" class="history-total">設定條件後即可查詢。日期皆留白時會查詢全部時間。</div>
+            <div id="historyQueryResults"><div class="empty-text">尚未查詢歷史訂單</div></div>
         </div>
     </div>
 
@@ -536,7 +595,7 @@ const categoryMapping = {
     "平盤掛籃":"3. 平盤掛籃系列","大平盤附勾":"3. 平盤掛籃系列","小平盤附勾":"3. 平盤掛籃系列","小平盤付勾":"3. 平盤掛籃系列",
     "花架":"4. 特殊功能架系列","信架":"4. 特殊功能架系列",
     "高籃細":"5. 細網置物籃系列","中籃細":"5. 細網置物籃系列","低籃細":"5. 細網置物籃系列",
-    "筆筒":"6. 筆筒系列","中筆筒":"6. 筆筒系列","小方筆筒":"6. 筆筒系列",
+    "中筆筒":"6. 筆筒系列","筆筒":"6. 筆筒系列","小方筆筒":"6. 筆筒系列",
     "C扣":"7. 配件與連接件","接頭":"7. 配件與連接件",
     "五掛勾":"8. 掛勾系列","丁字勾長":"8. 掛勾系列","丁字勾短":"8. 掛勾系列",
     "四角籃":"9. 四角籃與特殊籃系列","四角籃A-1":"9. 四角籃與特殊籃系列","四角籃A-2":"9. 四角籃與特殊籃系列","腳踏車籃":"9. 四角籃與特殊籃系列","吊籃":"9. 四角籃與特殊籃系列",
@@ -545,7 +604,7 @@ const categoryMapping = {
 };
 
 const defaultShops = [
-   "1-豪億莊敬店","2-豪億民雄店（豪億價格）","3-豪億水上店（豪億價格）","4-大豪虎尾店",
+    "1-豪億莊敬店","2-豪億民雄店（豪億價格）","3-豪億水上店（豪億價格）","4-大豪虎尾店",
     "好幫手梅山店","好幫手古坑店","一六旺口湖店","豪上豪中埔店","大家來斗六店","正泰斗南店",
     "來又來水上店","上勝嘉義店","上勝太保店（上勝價格）","大利多民雄店","大利多台林店",
     "大利多興中店","大利多三民店","正一忠孝店","正一平等店","49海佃店（49條碼）","49龍潭店（49條碼）",
@@ -698,7 +757,114 @@ function switchTab(tabId, activeBtn) {
 
 document.getElementById('btn-work-tab')   .addEventListener('click', function() { switchTab('work-tab',    this); });
 document.getElementById('btn-summary-tab').addEventListener('click', function() { switchTab('summary-tab', this); });
+document.getElementById('btn-delivery-tab').addEventListener('click', function() { switchTab('delivery-tab', this); });
+document.getElementById('btn-history-tab').addEventListener('click', function() { switchTab('history-tab', this); });
 document.getElementById('btn-setting-tab').addEventListener('click', function() { switchTab('setting-tab', this); });
+
+document.getElementById('historyShopMode').addEventListener('change', updateHistoryShopMode);
+document.getElementById('historySearchBtn').addEventListener('click', searchHistoryOrders);
+
+function updateHistoryShopMode() {
+    const mode = document.getElementById('historyShopMode').value;
+    document.getElementById('historySingleShopWrap').hidden = mode !== 'single';
+    document.getElementById('historyMultipleShopsWrap').style.display = mode === 'multiple' ? 'block' : 'none';
+}
+
+function renderHistoryShopOptions() {
+    const singleSelect = document.getElementById('historySingleShop');
+    const multipleOptions = document.getElementById('historyMultipleShops');
+    if (!singleSelect || !multipleOptions) return;
+
+    const previousShop = singleSelect.value;
+    singleSelect.innerHTML = '<option value="">請選擇店家</option>';
+    multipleOptions.innerHTML = '';
+    baseShops.forEach((shop, index) => {
+        const option = document.createElement('option');
+        option.value = shop;
+        option.textContent = shop;
+        singleSelect.appendChild(option);
+        const row = document.createElement('div');
+        row.className = 'history-shop-option';
+        row.innerHTML = `<input type="checkbox" id="history-shop-${index}" value="${escapeHtml(shop)}"><label for="history-shop-${index}">${escapeHtml(shop)}</label>`;
+        multipleOptions.appendChild(row);
+    });
+    if (baseShops.includes(previousShop)) singleSelect.value = previousShop;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[character]);
+}
+
+async function searchHistoryOrders() {
+    const startDate = document.getElementById('historyStartDate').value;
+    const endDate = document.getElementById('historyEndDate').value;
+    const shopMode = document.getElementById('historyShopMode').value;
+    const button = document.getElementById('historySearchBtn');
+    const summary = document.getElementById('historyQuerySummary');
+    const results = document.getElementById('historyQueryResults');
+    const shops = shopMode === 'single'
+        ? [document.getElementById('historySingleShop').value].filter(Boolean)
+        : shopMode === 'multiple'
+            ? Array.from(document.querySelectorAll('#historyMultipleShops input:checked')).map(input => input.value)
+            : [];
+
+    if (startDate && endDate && startDate > endDate) {
+        showToast('開始日期不可晚於結束日期', 'warning');
+        return;
+    }
+    if (shopMode !== 'all' && shops.length === 0) {
+        showToast('請至少選擇一家店家', 'warning');
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = '⏳ 正在查詢雲端資料...';
+    summary.classList.add('history-loading');
+    summary.textContent = '正在讀取歷史訂單';
+    results.innerHTML = '<div class="empty-text">請稍候...</div>';
+    try {
+        const queryUrl = new URL(SCRIPT_URL);
+        queryUrl.searchParams.set('action', 'queryHistory');
+        queryUrl.searchParams.set('startDate', startDate);
+        queryUrl.searchParams.set('endDate', endDate);
+        queryUrl.searchParams.set('shopMode', shopMode);
+        queryUrl.searchParams.set('shops', JSON.stringify(shops));
+        const response = await fetch(queryUrl);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if (data.status !== 'SUCCESS') throw new Error(data.message || '查詢失敗');
+        renderHistoryResults(data.orders || [], data.total || 0);
+    } catch (error) {
+        summary.classList.remove('history-loading');
+        summary.textContent = '查詢未完成';
+        results.innerHTML = `<div class="empty-text">${escapeHtml(error.message)}。請確認 GAS 已部署最新版本。</div>`;
+    } finally {
+        button.disabled = false;
+        button.textContent = '🔎 查詢雲端歷史訂單';
+    }
+}
+
+function renderHistoryResults(orders, total) {
+    const summary = document.getElementById('historyQuerySummary');
+    const results = document.getElementById('historyQueryResults');
+    summary.classList.remove('history-loading');
+    summary.textContent = `共 ${orders.length} 筆訂單明細，數量合計 ${total}。`;
+    if (orders.length === 0) {
+        results.innerHTML = '<div class="empty-text">找不到符合條件的歷史訂單</div>';
+        return;
+    }
+
+    const rows = orders.map(order => `<tr>
+        <td>${escapeHtml(order.date)}</td><td>${escapeHtml(order.shop)}</td>
+        <td>${escapeHtml(order.name)}</td><td>${escapeHtml(order.qty)}</td>
+        <td>${escapeHtml(order.barcode)}</td><td>${escapeHtml(order.note)}</td>
+    </tr>`).join('');
+    results.innerHTML = `<div class="history-results-wrap"><table class="history-results-table">
+        <thead><tr><th>日期</th><th>店家</th><th>商品</th><th>數量</th><th>條碼規範</th><th>備註</th></tr></thead>
+        <tbody>${rows}</tbody></table></div>`;
+}
 
 /* ════════════════════════════════════════════
    雲端同步（帶 debounce，避免高頻觸發）
@@ -877,6 +1043,7 @@ function renderBarcodeRulesUI() {
 function buildShopSelectOptions() {
     const prev = shopSelect.value;
     shopSelect.innerHTML = '<option value="">── 請選擇抄貨店家 ──</option>';
+    renderHistoryShopOptions();
     baseShops.forEach(shop => {
         const opt = document.createElement('option');
         opt.value = shop; opt.textContent = shop;
