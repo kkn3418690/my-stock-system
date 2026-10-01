@@ -266,6 +266,13 @@
         .history-results-table th, .history-results-table td { padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
         .history-results-table th { background: #f8fafc; color: var(--text-muted); font-size: 12px; position: sticky; top: 0; }
         .history-results-table td { font-size: 13px; }
+        .history-summary-table { min-width: 520px; }
+        .history-summary-table th, .history-summary-table td { text-align: center; }
+        .history-summary-table th:first-child, .history-summary-table td:first-child { text-align: left; }
+        .history-summary-table .product-total { font-size: 15px; font-weight: 900; color: var(--primary-dark); }
+        .history-detail-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+        .history-detail-section summary { cursor: pointer; font-size: 13px; font-weight: 700; color: #475569; }
+        .history-detail-section .history-results-wrap { margin-top: 8px; max-height: 420px; overflow: auto; }
         .history-total { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
         .history-loading { color: var(--info); }
 
@@ -850,20 +857,56 @@ function renderHistoryResults(orders, total) {
     const summary = document.getElementById('historyQuerySummary');
     const results = document.getElementById('historyQueryResults');
     summary.classList.remove('history-loading');
-    summary.textContent = `共 ${orders.length} 筆訂單明細，數量合計 ${total}。`;
+    summary.textContent = `共 ${orders.length} 筆訂單明細、數量合計 ${total}。`;
     if (orders.length === 0) {
         results.innerHTML = '<div class="empty-text">找不到符合條件的歷史訂單</div>';
         return;
     }
 
-    const rows = orders.map(order => `<tr>
+    const productTotals = new Map();
+    orders.forEach(order => {
+        const match = String(order.name || '').match(/^\[([^\]]+)\]\s*(.*)$/);
+        const color = match ? match[1] : '';
+        const product = match ? match[2] : String(order.name || '未命名商品');
+        if (!productTotals.has(product)) {
+            productTotals.set(product, { product, colors: Object.fromEntries(COLORS.map(item => [item, 0])), other: 0, total: 0 });
+        }
+        const group = productTotals.get(product);
+        const quantity = Number(order.qty) || 0;
+        if (Object.hasOwn(group.colors, color)) group.colors[color] += quantity;
+        else group.other += quantity;
+        group.total += quantity;
+    });
+
+    const orderedProducts = [...productTotals.values()].sort((first, second) => {
+        const firstIndex = baseProducts.indexOf(first.product);
+        const secondIndex = baseProducts.indexOf(second.product);
+        if (firstIndex >= 0 || secondIndex >= 0) {
+            if (firstIndex < 0) return 1;
+            if (secondIndex < 0) return -1;
+            return firstIndex - secondIndex;
+        }
+        return first.product.localeCompare(second.product, 'zh-Hant');
+    });
+    const summaryRows = orderedProducts.map(group => `<tr>
+        <td>${escapeHtml(group.product)}</td>
+        ${COLORS.map(color => `<td>${group.colors[color] || '—'}</td>`).join('')}
+        <td>${group.other || '—'}</td><td class="product-total">${group.total}</td>
+    </tr>`).join('');
+
+    const detailRows = orders.map(order => `<tr>
         <td>${escapeHtml(order.date)}</td><td>${escapeHtml(order.shop)}</td>
         <td>${escapeHtml(order.name)}</td><td>${escapeHtml(order.qty)}</td>
         <td>${escapeHtml(order.barcode)}</td><td>${escapeHtml(order.note)}</td>
     </tr>`).join('');
-    results.innerHTML = `<div class="history-results-wrap"><table class="history-results-table">
-        <thead><tr><th>日期</th><th>店家</th><th>商品</th><th>數量</th><th>條碼規範</th><th>備註</th></tr></thead>
-        <tbody>${rows}</tbody></table></div>`;
+    results.innerHTML = `<div class="history-results-wrap"><table class="history-results-table history-summary-table">
+        <thead><tr><th>商品</th>${COLORS.map(color => `<th>${color}色</th>`).join('')}<th>其他</th><th>總數</th></tr></thead>
+        <tbody>${summaryRows}</tbody></table></div>
+        <details class="history-detail-section"><summary>查看逐筆訂單明細（${orders.length} 筆）</summary>
+            <div class="history-results-wrap"><table class="history-results-table">
+                <thead><tr><th>日期</th><th>店家</th><th>商品</th><th>數量</th><th>條碼規範</th><th>備註</th></tr></thead>
+                <tbody>${detailRows}</tbody></table></div>
+        </details>`;
 }
 
 /* ════════════════════════════════════════════
