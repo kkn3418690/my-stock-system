@@ -273,6 +273,20 @@
         .history-detail-section { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
         .history-detail-section summary { cursor: pointer; font-size: 13px; font-weight: 700; color: #475569; }
         .history-detail-section .history-results-wrap { margin-top: 8px; max-height: 420px; overflow: auto; }
+        .history-chart-panel { margin-top: 18px; padding: 16px; border: 1px solid #dbe4ee; border-radius: 8px; background: linear-gradient(145deg, #f8fafc, #ffffff 70%); }
+        .history-chart-title { margin-bottom: 3px; font-size: 16px; color: #172554; }
+        .history-chart-caption { margin-bottom: 8px; color: var(--text-muted); font-size: 12px; }
+        .history-pie-scroll { overflow-x: auto; }
+        .history-pie-chart { display: block; width: 100%; min-width: 700px; height: auto; overflow: visible; }
+        .history-pie-label { fill: #334155; font-size: 12px; font-weight: 700; }
+        .history-pie-percent { fill: #fff; font-size: 12px; font-weight: 900; text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: rgba(15, 23, 42, 0.3); stroke-width: 2px; stroke-linejoin: round; }
+        .history-pie-leader { fill: none; stroke: #64748b; stroke-width: 1.25; }
+        .history-pie-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 7px 14px; margin-top: 8px; }
+        .history-pie-legend-item { display: flex; align-items: center; gap: 7px; min-width: 0; color: #334155; font-size: 12px; }
+        .history-pie-rank { flex: 0 0 24px; color: #64748b; font-size: 11px; font-weight: 800; font-variant-numeric: tabular-nums; }
+        .history-pie-swatch { flex: 0 0 10px; width: 10px; height: 10px; border-radius: 2px; }
+        .history-pie-legend-name { overflow: hidden; flex: 1; text-overflow: ellipsis; white-space: nowrap; }
+        .history-pie-legend-value { font-weight: 800; white-space: nowrap; }
         .history-total { color: var(--text-muted); font-size: 13px; margin-bottom: 8px; }
         .history-loading { color: var(--info); }
         .delivery-status { padding: 44px 12px; color: var(--primary-dark); font-size: 26px; font-weight: 900; text-align: center; }
@@ -968,6 +982,7 @@ function renderHistoryResults(orders, total) {
         <td>${escapeHtml(order.name)}</td><td>${escapeHtml(order.qty)}</td>
         <td>${escapeHtml(order.barcode)}</td><td>${escapeHtml(order.note)}</td>
     </tr>`).join('');
+    const chartMarkup = renderHistoryProductPieChart(orderedProducts);
     results.innerHTML = `<div class="history-results-wrap"><table class="history-results-table history-summary-table">
         <thead><tr><th>商品</th>${COLORS.map(color => `<th>${color}色</th>`).join('')}<th>其他</th><th>總數</th></tr></thead>
         <tbody>${summaryRows}</tbody></table></div>
@@ -975,7 +990,103 @@ function renderHistoryResults(orders, total) {
             <div class="history-results-wrap"><table class="history-results-table">
                 <thead><tr><th>日期</th><th>店家</th><th>商品</th><th>數量</th><th>條碼規範</th><th>備註</th></tr></thead>
                 <tbody>${detailRows}</tbody></table></div>
-        </details>`;
+        </details>${chartMarkup}`;
+}
+
+function renderHistoryProductPieChart(products) {
+    const rankedProducts = products.filter(product => product.total > 0)
+        .sort((first, second) => second.total - first.total || first.product.localeCompare(second.product, 'zh-Hant'));
+    const chartTotal = rankedProducts.reduce((sum, product) => sum + product.total, 0);
+    if (chartTotal <= 0) return '';
+
+    const palette = [
+        '#2563eb', '#e11d48', '#059669', '#d97706', '#7c3aed', '#0891b2',
+        '#65a30d', '#db2777', '#4f46e5', '#0f766e', '#ea580c', '#9333ea',
+        '#0284c7', '#c026d3', '#16a34a', '#475569'
+    ];
+    const topProducts = rankedProducts.slice(0, 15);
+    const otherTotal = rankedProducts.slice(15).reduce((sum, product) => sum + product.total, 0);
+    const chartProducts = otherTotal > 0
+        ? [...topProducts, { product: '其他商品', total: otherTotal }]
+        : topProducts;
+    const slices = chartProducts.map((product, index) => ({
+        ...product,
+        color: palette[index % palette.length],
+        percentage: product.total / chartTotal * 100
+    }));
+    const smallSlices = slices.filter(slice => slice.percentage < 6);
+    const largeSlices = slices.filter(slice => slice.percentage >= 6);
+    const labelGap = 23;
+    const labelCount = Math.ceil(smallSlices.length / 2);
+    const height = Math.max(390, labelCount * labelGap + 56);
+    const centerX = 500;
+    const centerY = height / 2;
+    const radius = Math.min(164, (height - 52) / 2);
+    const labelSlots = { left: [], right: [] };
+
+    let currentAngle = -Math.PI / 2;
+    const paths = slices.map(slice => {
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + slice.percentage / 100 * Math.PI * 2;
+        currentAngle = endAngle;
+        slice.midAngle = (startAngle + endAngle) / 2;
+        const startX = centerX + radius * Math.cos(startAngle);
+        const startY = centerY + radius * Math.sin(startAngle);
+        const endX = centerX + radius * Math.cos(endAngle);
+        const endY = centerY + radius * Math.sin(endAngle);
+        const path = slices.length === 1
+            ? `M ${centerX} ${centerY - radius} A ${radius} ${radius} 0 1 1 ${centerX} ${centerY + radius} A ${radius} ${radius} 0 1 1 ${centerX} ${centerY - radius} Z`
+            : `M ${centerX} ${centerY} L ${startX} ${startY} A ${radius} ${radius} 0 ${endAngle - startAngle > Math.PI ? 1 : 0} 1 ${endX} ${endY} Z`;
+        if (slice.percentage < 6) {
+            const side = Math.cos(slice.midAngle) < 0 ? 'left' : 'right';
+            labelSlots[side].push({ slice, anchorX: centerX + (radius + 2) * Math.cos(slice.midAngle), anchorY: centerY + (radius + 2) * Math.sin(slice.midAngle) });
+        }
+        return `<path d="${path}" fill="${slice.color}" stroke="#fff" stroke-width="2"><title>${escapeHtml(slice.product)}：${slice.total}（${slice.percentage.toFixed(1)}%）</title></path>`;
+    }).join('');
+
+    const leaders = ['left', 'right'].map(side => {
+        const labels = labelSlots[side].sort((first, second) => first.anchorY - second.anchorY);
+        const xText = side === 'left' ? 260 : 740;
+        const xBend = side === 'left' ? 278 : 722;
+        const yPositions = labels.map(label => Math.max(24, Math.min(height - 24, label.anchorY)));
+        for (let index = 1; index < yPositions.length; index++) {
+            yPositions[index] = Math.max(yPositions[index], yPositions[index - 1] + 20);
+        }
+        const overflow = yPositions.length ? yPositions[yPositions.length - 1] - (height - 24) : 0;
+        if (overflow > 0) {
+            for (let index = 0; index < yPositions.length; index++) yPositions[index] -= overflow;
+        }
+        for (let index = yPositions.length - 2; index >= 0; index--) {
+            yPositions[index] = Math.min(yPositions[index], yPositions[index + 1] - 20);
+        }
+        return labels.map((label, index) => {
+            const yText = yPositions[index];
+            const textAnchor = side === 'left' ? 'end' : 'start';
+            const displayName = label.slice.product.length > 19 ? label.slice.product.slice(0, 18) + '…' : label.slice.product;
+            return `<path class="history-pie-leader" d="M ${label.anchorX} ${label.anchorY} L ${xBend} ${label.anchorY} L ${side === 'left' ? 270 : 730} ${yText}" />
+                <text class="history-pie-label" x="${xText}" y="${yText}" text-anchor="${textAnchor}" dominant-baseline="middle">${escapeHtml(displayName)} ${label.slice.percentage.toFixed(1)}%</text>`;
+        }).join('');
+    }).join('');
+
+    const internalLabels = largeSlices.map(slice => {
+        const labelRadius = radius * 0.63;
+        const x = centerX + labelRadius * Math.cos(slice.midAngle);
+        const y = centerY + labelRadius * Math.sin(slice.midAngle);
+        return `<text class="history-pie-percent" x="${x}" y="${y}">${slice.percentage.toFixed(1)}%</text>`;
+    }).join('');
+    const legend = rankedProducts.map((product, index) => `<div class="history-pie-legend-item">
+        <span class="history-pie-rank">${String(index + 1).padStart(2, '0')}</span>
+        <span class="history-pie-swatch" style="background:${index < 15 ? palette[index] : '#cbd5e1'}"></span>
+        <span class="history-pie-legend-name" title="${escapeHtml(product.product)}">${escapeHtml(product.product)}</span>
+        <span class="history-pie-legend-value">${product.total} · ${(product.total / chartTotal * 100).toFixed(1)}%</span>
+    </div>`).join('');
+
+    return `<section class="history-chart-panel" aria-labelledby="historyPieTitle">
+        <h2 id="historyPieTitle" class="history-chart-title">📊 商品數量占比</h2>
+        <div class="history-chart-caption">依目前搜尋結果計算，共 ${chartTotal} 件；圓餅圖顯示前 15 名，其餘合併為「其他商品」，下方列出全部排名。</div>
+        <div class="history-pie-scroll"><svg class="history-pie-chart" viewBox="0 0 1000 ${height}" role="img" aria-label="商品數量占比圓餅圖">${paths}${leaders}${internalLabels}</svg></div>
+        <div class="history-pie-legend">${legend}</div>
+    </section>`;
 }
 
 /* ════════════════════════════════════════════
