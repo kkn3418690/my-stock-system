@@ -409,11 +409,6 @@
             -webkit-overflow-scrolling: touch; /* 讓 iOS 滑動更順暢 */
         }
 
-        /* 確保 body 底部有空間，才不會被工具列蓋住最後一行 */
-        body {
-            padding-bottom: 60px !important; 
-        }
-
         .quick-btn {
             padding: 6px 12px;
             margin: 0 4px;
@@ -528,7 +523,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-pzsjH1yRLpjQYkhrh
 const defaultProducts = [
     "40x120","40x80","60x60","40x60","40x40","28x60","28x40","36x36",
     "長高大籃","超高大籃","高籃","中籃","低特大","低大","長低小","低小",
-    "平盤掛籃","大平盤附勾","小平盤付勾","花架","信架","高籃細","中籃細",
+    "平盤掛籃","大平盤附勾","小平盤附勾","花架","信架","高籃細","中籃細",
     "低籃細","中筆筒","筆筒","小方筆筒","C扣","接頭","五掛勾","丁字勾長",
     "丁字勾短","四角籃","四角籃A-1","四角籃A-2","腳踏車籃","吊籃",
     "2尺L片","3尺L片","2尺x3尺網片","2尺x4尺網片","2尺x5尺網片",
@@ -538,7 +533,7 @@ const defaultProducts = [
 const categoryMapping = {
     "40x120":"1. 尺寸規格系列（數字型）","40x80":"1. 尺寸規格系列（數字型）","60x60":"1. 尺寸規格系列（數字型）","40x60":"1. 尺寸規格系列（數字型）","40x40":"1. 尺寸規格系列（數字型）","28x60":"1. 尺寸規格系列（數字型）","28x40":"1. 尺寸規格系列（數字型）","36x36":"1. 尺寸規格系列（數字型）",
     "長高大籃":"2. 標準置物籃系列","超高大籃":"2. 標準置物籃系列","高籃":"2. 標準置物籃系列","中籃":"2. 標準置物籃系列","低特大":"2. 標準置物籃系列","低大":"2. 標準置物籃系列","長低小":"2. 標準置物籃系列","低小":"2. 標準置物籃系列",
-    "平盤掛籃":"3. 平盤掛籃系列","大平盤附勾":"3. 平盤掛籃系列","小平盤付勾":"3. 平盤掛籃系列",
+    "平盤掛籃":"3. 平盤掛籃系列","大平盤附勾":"3. 平盤掛籃系列","小平盤附勾":"3. 平盤掛籃系列","小平盤付勾":"3. 平盤掛籃系列",
     "花架":"4. 特殊功能架系列","信架":"4. 特殊功能架系列",
     "高籃細":"5. 細網置物籃系列","中籃細":"5. 細網置物籃系列","低籃細":"5. 細網置物籃系列",
     "中筆筒":"6. 筆筒系列","筆筒":"6. 筆筒系列","小方筆筒":"6. 筆筒系列",
@@ -601,6 +596,14 @@ const syncStatusEl      = document.getElementById('syncStatus');
    ════════════════════════════════════════════ */
 function getProductGroup(name) {
     return categoryMapping[name] || "12. 其它綜合配件類";
+}
+
+function createDefaultShopData() {
+    return { barcode: '店家條碼', suggestQty: {} };
+}
+
+function createDefaultSuggestQty() {
+    return Object.fromEntries(COLORS.map(color => [color, 5]));
 }
 
 function setSyncStatus(state, msg) {
@@ -904,7 +907,7 @@ function updateShopInfoPanel() {
     const shopName = shopSelect.value;
     const el = document.getElementById('infoDetails');
     if (!shopName) { el.innerHTML = "<span style='color:#94a3b8;'>請先選取上方店家...</span>"; return; }
-    if (!shopDatabase[shopName]) shopDatabase[shopName] = { barcode: '店家條碼', suggestQty: {} };
+    if (!shopDatabase[shopName]) shopDatabase[shopName] = createDefaultShopData();
     const barcode = getShopBarcode(shopName);
     shopDatabase[shopName].barcode = barcode;
     el.innerHTML = `🏷️ <b>條碼規範：</b>${barcode}`;
@@ -923,7 +926,7 @@ function renderMatrixTable() {
         return;
     }
 
-    if (!shopDatabase[shopName]) shopDatabase[shopName] = { barcode: '店家條碼', suggestQty: {} };
+    if (!shopDatabase[shopName]) shopDatabase[shopName] = createDefaultShopData();
     if (!shopDatabase[shopName].suggestQty) shopDatabase[shopName].suggestQty = {};
 
     const groups = {};
@@ -970,7 +973,7 @@ function renderMatrixTable() {
         prods.forEach(prod => {
             const prodId = prod.replace(/[^\w\u4e00-\u9fff]/g, '_');
             if (!shopDatabase[shopName].suggestQty[prod]) {
-                shopDatabase[shopName].suggestQty[prod] = { '紫':5,'紅':5,'黑':5,'白':5 };
+                shopDatabase[shopName].suggestQty[prod] = createDefaultSuggestQty();
             }
                 html += `<tr>
                 <td class="prod-name-td" style="position:relative;">
@@ -1026,7 +1029,7 @@ function renderMatrixTable() {
 
             baseProducts.forEach(prod => {
                 if (getProductGroup(prod) === gName) {
-                    if (!shopDatabase[shopName].suggestQty[prod]) shopDatabase[shopName].suggestQty[prod] = { '紫':5,'紅':5,'黑':5,'白':5 };
+                    if (!shopDatabase[shopName].suggestQty[prod]) shopDatabase[shopName].suggestQty[prod] = createDefaultSuggestQty();
                     COLORS.forEach(c => shopDatabase[shopName].suggestQty[prod][c] = num);
                 }
             });
@@ -1161,7 +1164,7 @@ async function bulkEditGroupLimit(groupName, color) {
     baseProducts.forEach(prod => {
         if (getProductGroup(prod) !== groupName) return;
         if (!shopDatabase[shopName].suggestQty[prod]) {
-            shopDatabase[shopName].suggestQty[prod] = { '紫':5,'紅':5,'黑':5,'白':5 };
+            shopDatabase[shopName].suggestQty[prod] = createDefaultSuggestQty();
         }
         shopDatabase[shopName].suggestQty[prod][color] = num;
     });
