@@ -524,14 +524,30 @@
                         <option value="multiple">複選店家</option>
                     </select>
                 </div>
+                <div>
+                    <label for="historyProductMode">商品範圍</label>
+                    <select id="historyProductMode">
+                        <option value="all">全部商品</option>
+                        <option value="single">單一商品</option>
+                        <option value="multiple">複選商品</option>
+                    </select>
+                </div>
                 <div id="historySingleShopWrap" hidden>
                     <label for="historySingleShop">選擇店家</label>
                     <select id="historySingleShop"></select>
+                </div>
+                <div id="historySingleProductWrap" hidden>
+                    <label for="historySingleProduct">選擇商品</label>
+                    <select id="historySingleProduct"></select>
                 </div>
             </div>
             <div id="historyMultipleShopsWrap" style="display:none; margin-top:10px;">
                 <label>選擇店家（可複選）</label>
                 <div id="historyMultipleShops" class="history-shop-options"></div>
+            </div>
+            <div id="historyMultipleProductsWrap" style="display:none; margin-top:10px;">
+                <label>選擇商品（可複選）</label>
+                <div id="historyMultipleProducts" class="history-shop-options"></div>
             </div>
             <button type="button" id="historySearchBtn" class="btn btn-info" style="margin-top:12px;">🔎 查詢雲端歷史訂單</button>
         </div>
@@ -772,6 +788,7 @@ document.getElementById('btn-history-tab').addEventListener('click', function() 
 document.getElementById('btn-setting-tab').addEventListener('click', function() { switchTab('setting-tab', this); });
 
 document.getElementById('historyShopMode').addEventListener('change', updateHistoryShopMode);
+document.getElementById('historyProductMode').addEventListener('change', updateHistoryProductMode);
 document.getElementById('historySearchBtn').addEventListener('click', searchHistoryOrders);
 
 function updateHistoryShopMode() {
@@ -780,14 +797,25 @@ function updateHistoryShopMode() {
     document.getElementById('historyMultipleShopsWrap').style.display = mode === 'multiple' ? 'block' : 'none';
 }
 
+function updateHistoryProductMode() {
+    const mode = document.getElementById('historyProductMode').value;
+    document.getElementById('historySingleProductWrap').hidden = mode !== 'single';
+    document.getElementById('historyMultipleProductsWrap').style.display = mode === 'multiple' ? 'block' : 'none';
+}
+
 function renderHistoryShopOptions() {
     const singleSelect = document.getElementById('historySingleShop');
     const multipleOptions = document.getElementById('historyMultipleShops');
-    if (!singleSelect || !multipleOptions) return;
+    const singleProductSelect = document.getElementById('historySingleProduct');
+    const multipleProducts = document.getElementById('historyMultipleProducts');
+    if (!singleSelect || !multipleOptions || !singleProductSelect || !multipleProducts) return;
 
     const previousShop = singleSelect.value;
+    const previousProduct = singleProductSelect.value;
     singleSelect.innerHTML = '<option value="">請選擇店家</option>';
+    singleProductSelect.innerHTML = '<option value="">請選擇商品</option>';
     multipleOptions.innerHTML = '';
+    multipleProducts.innerHTML = '';
     baseShops.forEach((shop, index) => {
         const option = document.createElement('option');
         option.value = shop;
@@ -798,7 +826,33 @@ function renderHistoryShopOptions() {
         row.innerHTML = `<input type="checkbox" id="history-shop-${index}" value="${escapeHtml(shop)}"><label for="history-shop-${index}">${escapeHtml(shop)}</label>`;
         multipleOptions.appendChild(row);
     });
+    baseProducts.forEach((product, index) => {
+        const option = document.createElement('option');
+        option.value = product;
+        option.textContent = product;
+        singleProductSelect.appendChild(option);
+        const row = document.createElement('div');
+        row.className = 'history-shop-option';
+        row.innerHTML = `<input type="checkbox" id="history-product-${index}" value="${escapeHtml(product)}"><label for="history-product-${index}">${escapeHtml(product)}</label>`;
+        multipleProducts.appendChild(row);
+    });
+    const selectAllRow = document.createElement('div');
+    selectAllRow.className = 'history-shop-option';
+    selectAllRow.innerHTML = '<input type="checkbox" id="history-select-all-products"><label for="history-select-all-products">全部商品</label>';
+    multipleProducts.prepend(selectAllRow);
+    document.getElementById('history-select-all-products').addEventListener('change', function() {
+        multipleProducts.querySelectorAll('input[type="checkbox"]:not(#history-select-all-products)').forEach(input => {
+            input.checked = this.checked;
+        });
+    });
+    multipleProducts.querySelectorAll('input[type="checkbox"]:not(#history-select-all-products)').forEach(input => {
+        input.addEventListener('change', () => {
+            const productChecks = [...multipleProducts.querySelectorAll('input[type="checkbox"]:not(#history-select-all-products)')];
+            document.getElementById('history-select-all-products').checked = productChecks.length > 0 && productChecks.every(item => item.checked);
+        });
+    });
     if (baseShops.includes(previousShop)) singleSelect.value = previousShop;
+    if (baseProducts.includes(previousProduct)) singleProductSelect.value = previousProduct;
 }
 
 function escapeHtml(value) {
@@ -811,6 +865,7 @@ async function searchHistoryOrders() {
     const startDate = document.getElementById('historyStartDate').value;
     const endDate = document.getElementById('historyEndDate').value;
     const shopMode = document.getElementById('historyShopMode').value;
+    const productMode = document.getElementById('historyProductMode').value;
     const button = document.getElementById('historySearchBtn');
     const summary = document.getElementById('historyQuerySummary');
     const results = document.getElementById('historyQueryResults');
@@ -819,6 +874,11 @@ async function searchHistoryOrders() {
         : shopMode === 'multiple'
             ? Array.from(document.querySelectorAll('#historyMultipleShops input:checked')).map(input => input.value)
             : [];
+    const products = productMode === 'single'
+        ? [document.getElementById('historySingleProduct').value].filter(Boolean)
+        : productMode === 'multiple'
+            ? Array.from(document.querySelectorAll('#historyMultipleProducts input[type="checkbox"]:not(#history-select-all-products):checked')).map(input => input.value)
+            : [];
 
     if (startDate && endDate && startDate > endDate) {
         showToast('開始日期不可晚於結束日期', 'warning');
@@ -826,6 +886,10 @@ async function searchHistoryOrders() {
     }
     if (shopMode !== 'all' && shops.length === 0) {
         showToast('請至少選擇一家店家', 'warning');
+        return;
+    }
+    if (productMode !== 'all' && products.length === 0) {
+        showToast('請至少選擇一項商品', 'warning');
         return;
     }
 
@@ -841,6 +905,8 @@ async function searchHistoryOrders() {
         queryUrl.searchParams.set('endDate', endDate);
         queryUrl.searchParams.set('shopMode', shopMode);
         queryUrl.searchParams.set('shops', JSON.stringify(shops));
+        queryUrl.searchParams.set('productMode', productMode);
+        queryUrl.searchParams.set('products', JSON.stringify(products));
         const response = await fetch(queryUrl);
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const data = await response.json();
