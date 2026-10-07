@@ -145,6 +145,18 @@
             justify-content: space-between;
             align-items: center;
         }
+        .group-collapse-toggle {
+            flex: 1;
+            min-width: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            text-align: left;
+            cursor: pointer;
+        }
+        .group-collapse-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
         .matrix-table { width: 100%; border-collapse: collapse; text-align: center; table-layout: fixed; }
         .matrix-table th, .matrix-table td { border-bottom: 1px solid #e2e8f0; padding: 6px 3px; vertical-align: middle; }
@@ -636,10 +648,10 @@ const categoryMapping = {
     "花架":"4. 特殊功能架系列","信架":"4. 特殊功能架系列",
     "高籃細":"5. 細網置物籃系列","中籃細":"5. 細網置物籃系列","低籃細":"5. 細網置物籃系列",
     "中筆筒":"6. 筆筒系列","筆筒":"6. 筆筒系列","小方筆筒":"6. 筆筒系列",
-    "C扣":"7. 配件與連接件","接頭":"7. 配件與連接件",
-    "五掛勾":"8. 掛勾系列","丁字勾長":"8. 掛勾系列","丁字勾短":"8. 掛勾系列",
-    "四角籃":"9. 四角籃與特殊籃系列","四角籃A-1":"9. 四角籃與特殊籃系列","四角籃A-2":"9. 四角籃與特殊籃系列","腳踏車籃":"9. 四角籃與特殊籃系列","吊籃":"9. 四角籃與特殊籃系列",
-    "2尺L片":"10. L片系列","3尺L片":"10. L片系列",
+    "2尺L片":"7. L片系列","3尺L片":"7. L片系列",
+    "C扣":"8. 配件與連接件","接頭":"8. 配件與連接件",
+    "五掛勾":"9. 掛勾系列","丁字勾長":"9. 掛勾系列","丁字勾短":"9. 掛勾系列",
+    "四角籃":"10. 四角籃與特殊籃系列","四角籃A-1":"10. 四角籃與特殊籃系列","四角籃A-2":"10. 四角籃與特殊籃系列","腳踏車籃":"10. 四角籃與特殊籃系列","吊籃":"10. 四角籃與特殊籃系列",
     "2尺x3尺網片":"11. 網片系列","2尺x4尺網片":"11. 網片系列","2尺x5尺網片":"11. 網片系列","2尺x6尺網片":"11. 網片系列","3尺x5尺網片":"11. 網片系列","3尺x6尺網片":"11. 網片系列"
 };
 
@@ -1337,7 +1349,9 @@ function renderMatrixTable() {
         // --- 區塊 1：取代原本的 group-header-banner ---
         html += `<div class="group-container">
                 <div class="group-header-banner">
-                <span>📂 ${gName}</span>
+                <button type="button" class="group-collapse-toggle" aria-expanded="true" aria-label="收合群組 ${gName}">
+                    📂 ${gName} <span aria-hidden="true">▾</span>
+                </button>
                 <button type="button" class="btn-group-set" data-group="${gEsc}" 
                         style="background: #ffffff; color: #334155; border: 1px solid #cbd5e1; 
                                border-radius: 4px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
@@ -1405,6 +1419,17 @@ function renderMatrixTable() {
     container.innerHTML = html;
 
     // --- 區塊 2：新增事件綁定（請接在 container.innerHTML = html; 之後） ---
+
+    container.querySelectorAll('.group-collapse-toggle').forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            const isExpanded = this.getAttribute('aria-expanded') === 'true';
+            const groupContainer = this.closest('.group-container');
+            groupContainer.querySelector('.matrix-table').hidden = isExpanded;
+            this.setAttribute('aria-expanded', String(!isExpanded));
+            this.setAttribute('aria-label', `${isExpanded ? '展開' : '收合'}群組 ${this.textContent.trim().replace('▾', '').replace('▸', '').trim()}`);
+            this.querySelector('[aria-hidden="true"]').textContent = isExpanded ? '▸' : '▾';
+        });
+    });
 
     // 1. 綁定「設全組」按鈕 (11個群組獨立修改)
     container.querySelectorAll('.btn-group-set').forEach(btn => {
