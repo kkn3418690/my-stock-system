@@ -727,6 +727,12 @@ let shopDatabase = {};
 let records      = [];
 let syncTimer    = null;
 let currentBarcodesRaw = defaultBarcodes.join('\n');
+let collapsedGroupsByShop = {};
+try {
+    collapsedGroupsByShop = JSON.parse(localStorage.getItem('jt-collapsed-groups') || '{}') || {};
+} catch (error) {
+    collapsedGroupsByShop = {};
+}
 
 /* ════════════════════════════════════════════
    DOM 參照
@@ -1409,14 +1415,15 @@ function renderMatrixTable() {
 
     sortedGroups.forEach(gName => {
         const prods = groups[gName];
+        const isExpanded = !collapsedGroupsByShop[shopName]?.[gName];
         // escape for HTML attr
         const gEsc = gName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
         // --- 區塊 1：取代原本的 group-header-banner ---
         html += `<div class="group-container">
                 <div class="group-header-banner">
-                <button type="button" class="group-collapse-toggle" aria-expanded="true" aria-label="收合群組 ${gName}">
-                    📂 ${gName} <span aria-hidden="true">▾</span>
+                <button type="button" class="group-collapse-toggle" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'}群組 ${gName}">
+                    📂 ${gName} <span aria-hidden="true">${isExpanded ? '▾' : '▸'}</span>
                 </button>
                 <button type="button" class="btn-group-set" data-group="${gEsc}" 
                         style="background: #ffffff; color: #334155; border: 1px solid #cbd5e1; 
@@ -1424,7 +1431,7 @@ function renderMatrixTable() {
                     ⚙️ 設全組
                 </button>
             </div>
-            <table class="matrix-table">
+            <table class="matrix-table"${isExpanded ? '' : ' hidden'}>
                 <colgroup>
                     <col style="width:22%">
                     <col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:14%">
@@ -1501,6 +1508,13 @@ function renderMatrixTable() {
             this.setAttribute('aria-expanded', String(!isExpanded));
             this.setAttribute('aria-label', `${isExpanded ? '展開' : '收合'}群組 ${this.textContent.trim().replace('▾', '').replace('▸', '').trim()}`);
             this.querySelector('[aria-hidden="true"]').textContent = isExpanded ? '▸' : '▾';
+            if (!collapsedGroupsByShop[shopName]) collapsedGroupsByShop[shopName] = {};
+            collapsedGroupsByShop[shopName][this.textContent.trim().replace(/^📂\s*/, '').replace(/[▾▸]$/, '').trim()] = isExpanded;
+            try {
+                localStorage.setItem('jt-collapsed-groups', JSON.stringify(collapsedGroupsByShop));
+            } catch (error) {
+                console.warn('Unable to save collapsed group preferences:', error);
+            }
         });
     });
 
