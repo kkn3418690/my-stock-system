@@ -174,6 +174,37 @@
         .clickable-th:active { background: #dbeafe; }
 
         .prod-name-td { text-align: left; font-weight: 700; color: #1e293b; font-size: 13px; padding-left: 8px !important; }
+        .prod-name-content { display: grid; grid-template-columns: minmax(0, 1fr) 22px; gap: 3px; align-items: start; }
+        .prod-name-label { grid-column: 1; overflow-wrap: anywhere; }
+        .edit-icon {
+            grid-column: 2;
+            grid-row: 1;
+            width: 22px;
+            height: 22px;
+            border: 0;
+            border-radius: 4px;
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 13px;
+            line-height: 1;
+            cursor: pointer;
+        }
+        .packaging-hint-button {
+            grid-column: 1 / -1;
+            width: 100%;
+            padding: 3px 4px;
+            border: 1px solid #fed7aa;
+            border-radius: 4px;
+            background: #fff7ed;
+            color: #9a3412;
+            font-size: 10px;
+            font-weight: 600;
+            line-height: 1.35;
+            text-align: left;
+            overflow-wrap: anywhere;
+            cursor: pointer;
+        }
+        .packaging-hint-button.is-empty { border-style: dashed; background: #fff; color: #64748b; }
 
         .cell-container { display: flex; flex-direction: column; align-items: center; gap: 2px; }
         .matrix-qty-input {
@@ -599,6 +630,11 @@
             <h2>🏷️ 3. 編輯店家條碼規範</h2>
             <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">（系統會自動讀取上方店家清單，請為各店家選擇對應的條碼規範）</p>
             <div id="barcodeRulesContainer" style="max-height: 280px; overflow-y: auto; border: 2px solid var(--border); border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;"></div>
+        </div>
+        <div class="card">
+            <h2>📝 4. 店家規範</h2>
+            <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">（輸入各店家的特別提醒，會顯示在智慧抄貨頁的黃色資訊框）</p>
+            <div id="shopRulesContainer" style="max-height: 280px; overflow-y: auto; border: 2px solid var(--border); border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;"></div>
             <button type="button" class="btn btn-info" id="saveSettingsBtn" style="margin-top: 5px;">💾 儲存並安全同步配置</button>
         </div>
     </div>
@@ -1213,6 +1249,7 @@ function loadSystem() {
             baseShops    = shopsTextarea.value.split('\n').map(s => s.trim()).filter(Boolean);
             buildShopSelectOptions();
             renderBarcodeRulesUI();
+            renderShopRulesUI();
             renderMatrixTable();
             updateUI();
             setSyncStatus('synced', '🟢 已成功載入最新雲端資料');
@@ -1226,6 +1263,7 @@ function loadSystem() {
             baseShops    = defaultShops;
             buildShopSelectOptions();
             renderBarcodeRulesUI();
+            renderShopRulesUI();
             renderMatrixTable();
             updateUI();
             setSyncStatus('error', '❌ 無法載入線上資料（離線模式）');
@@ -1272,6 +1310,33 @@ function renderBarcodeRulesUI() {
     });
 }
 
+function renderShopRulesUI() {
+    const container = document.getElementById('shopRulesContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    baseShops.forEach(shop => {
+        const row = document.createElement('div');
+        row.className = 'barcode-rule-row';
+
+        const shopLabel = document.createElement('span');
+        shopLabel.style.cssText = 'min-width:130px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px;';
+        shopLabel.title = shop;
+        shopLabel.textContent = `🏪 ${shop}`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'shop-rule-input';
+        input.dataset.shop = shop;
+        input.placeholder = '輸入店家規範...';
+        input.value = String(shopDatabase[shop]?.shopRule || '');
+        input.style.cssText = 'flex:1; min-width:0; margin-bottom:0; font-size:13px; padding:6px 8px;';
+
+        row.append(shopLabel, input);
+        container.appendChild(row);
+    });
+}
+
 /* ════════════════════════════════════════════
    店家下拉選單
    ════════════════════════════════════════════ */
@@ -1312,7 +1377,8 @@ function updateShopInfoPanel() {
     if (!shopDatabase[shopName]) shopDatabase[shopName] = createDefaultShopData();
     const barcode = getShopBarcode(shopName);
     shopDatabase[shopName].barcode = barcode;
-    el.innerHTML = `🏷️ <b>條碼規範：</b>${barcode}`;
+    const shopRule = String(shopDatabase[shopName].shopRule || '').trim();
+    el.innerHTML = `🏷️ <b>條碼規範：</b>${escapeHtml(barcode)}${shopRule ? `<br>📝 <b>店家規範：</b>${escapeHtml(shopRule).replace(/\n/g, '<br>')}` : ''}`;
 }
 
 /* ════════════════════════════════════════════
@@ -1379,14 +1445,21 @@ function renderMatrixTable() {
             if (!shopDatabase[shopName].suggestQty[prod]) {
                 shopDatabase[shopName].suggestQty[prod] = createDefaultSuggestQty();
             }
-                html += `<tr>
-                <td class="prod-name-td" style="position:relative;">
-                <span style="padding-right: 20px;">${prod}</span>
-                <span class="edit-icon" data-prod="${prod}" 
-                      style="position:absolute; right:2px; top:50%; transform:translateY(-50%); cursor:pointer; color:#94a3b8; font-size:16px;">
-                      ⚙️
-                      </span>
-                      </td>`;
+            const savedHints = shopDatabase[shopName].packagingHints || {};
+            const packagingHint = Object.hasOwn(savedHints, prod)
+                ? String(savedHints[prod] || '').trim()
+                : getLegacyPackagingHint(shopName, prod);
+            const packagingHintMarkup = ['C扣', '接頭'].includes(prod)
+                ? `<button type="button" class="packaging-hint-button${packagingHint ? '' : ' is-empty'}" data-prod="${escapeHtml(prod)}" aria-label="修改 ${escapeHtml(prod)} 的包裝提示">${packagingHint ? `📦 ${escapeHtml(packagingHint)}` : '＋設定包裝提示'}</button>`
+                : '';
+            html += `<tr>
+                <td class="prod-name-td">
+                    <div class="prod-name-content">
+                        <span class="prod-name-label">${escapeHtml(prod)}</span>
+                        <button type="button" class="edit-icon" data-prod="${escapeHtml(prod)}" aria-label="修改 ${escapeHtml(prod)} 的顏色上限" title="修改顏色上限">⚙️</button>
+                        ${packagingHintMarkup}
+                    </div>
+                </td>`;
 
             COLORS.forEach(c => {
                 const rec      = records.find(r => r.shop === shopName && r.baseName === prod && r.color === c);
@@ -1428,6 +1501,26 @@ function renderMatrixTable() {
             this.setAttribute('aria-expanded', String(!isExpanded));
             this.setAttribute('aria-label', `${isExpanded ? '展開' : '收合'}群組 ${this.textContent.trim().replace('▾', '').replace('▸', '').trim()}`);
             this.querySelector('[aria-hidden="true"]').textContent = isExpanded ? '▸' : '▾';
+        });
+    });
+
+    container.querySelectorAll('.packaging-hint-button').forEach(button => {
+        button.addEventListener('click', async function() {
+            const product = this.dataset.prod;
+            const shop = shopSelect.value;
+            const savedHints = shopDatabase[shop].packagingHints || {};
+            const currentHint = Object.hasOwn(savedHints, product)
+                ? String(savedHints[product] || '').trim()
+                : getLegacyPackagingHint(shop, product);
+            const value = await showPrompt('修改包裝提示', `店家：${escapeHtml(shop)}<br>品項：${escapeHtml(product)}<br>例如：一包10個、單個`, currentHint, 'text');
+            if (value === null) return;
+
+            if (!shopDatabase[shop].packagingHints) shopDatabase[shop].packagingHints = {};
+            const hint = value.trim();
+            shopDatabase[shop].packagingHints[product] = hint;
+            saveAll();
+            renderMatrixTable();
+            showToast(hint ? `✅ ${product} 包裝提示已儲存` : `已清除 ${product} 包裝提示`, 'success');
         });
     });
 
@@ -1529,6 +1622,11 @@ function renderMatrixTable() {
 function getSavedNoteValue(shop, prod) {
     const found = records.find(r => r.shop === shop && r.baseName === prod && r.note);
     return found ? found.note : '';
+}
+
+function getLegacyPackagingHint(shop, prod) {
+    const found = records.find(r => r.shop === shop && r.baseName === prod && Number(r.qty) === 0 && r.note && /包/.test(r.note));
+    return found ? found.note.trim() : '';
 }
 
 function getBarcodeRuleOrder() {
@@ -1828,6 +1926,12 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
     });
     if (barcodeRulesArray.length > 0) currentBarcodesRaw = barcodeRulesArray.join('\n');
 
+    document.querySelectorAll('#shopRulesContainer .shop-rule-input').forEach(input => {
+        const shop = input.dataset.shop;
+        if (!shopDatabase[shop]) shopDatabase[shop] = createDefaultShopData();
+        shopDatabase[shop].shopRule = input.value.trim();
+    });
+
     // 3. 【關鍵修改】發送請求給後端，指定 action 為 "saveSettings"
     fetch(SCRIPT_URL, {
         method: 'POST',
@@ -1858,6 +1962,7 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
     // 4. 重新渲染畫面
     buildShopSelectOptions();
     renderBarcodeRulesUI();
+    renderShopRulesUI();
     renderMatrixTable();
     updateUI();
 });
