@@ -807,15 +807,27 @@ function showConfirm(title, msg, opts = {}) {
 }
 
 /* ── 輸入 Modal（替代 prompt） ── */
-function showPrompt(title, msg, defaultVal = '', inputType = 'number') {
+function showPrompt(title, msg, defaultVal = '', inputType = 'number', options = {}) {
     return new Promise(resolve => {
         const root = document.getElementById('modal-root');
+        const isNumber = inputType === 'number';
+        const inputAttrs = isNumber
+            ? 'type="number" min="0" inputmode="numeric"'
+            : `type="${inputType}" inputmode="text"`;
+        const quickTags = Array.isArray(options.quickTags) ? options.quickTags : [];
+        const quickTagsHtml = quickTags.length > 0
+            ? `<div class="modal-quick-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; justify-content:center;">
+                ${quickTags.map(tag => `<button type="button" class="btn-tag" data-tag="${escapeHtml(tag)}" style="padding:5px 9px; font-size:12px; font-weight:600; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; color:#334155; cursor:pointer;">${escapeHtml(tag)}</button>`).join('')}
+               </div>`
+            : '';
+
         root.innerHTML = `
             <div class="modal-backdrop" id="modal-backdrop">
                 <div class="modal">
                     <h3>${title}</h3>
                     ${msg ? `<p>${msg}</p>` : ''}
-                    <input id="modal-input" type="${inputType}" value="${defaultVal}" min="0" inputmode="numeric" autocomplete="off">
+                    <input id="modal-input" ${inputAttrs} value="${escapeHtml(defaultVal)}" autocomplete="off">
+                    ${quickTagsHtml}
                     <div class="modal-actions">
                         <button type="button" class="btn-cancel" id="modal-cancel">取消</button>
                         <button type="button" class="btn-confirm" id="modal-confirm">確定</button>
@@ -824,9 +836,18 @@ function showPrompt(title, msg, defaultVal = '', inputType = 'number') {
             </div>`;
         const input = document.getElementById('modal-input');
         const close = (val) => { root.innerHTML = ''; resolve(val); };
+
+        root.querySelectorAll('.modal-quick-tags .btn-tag').forEach(btn => {
+            btn.addEventListener('click', () => {
+                input.value = btn.dataset.tag === '清空' ? '' : btn.dataset.tag;
+                input.focus();
+            });
+        });
+
         input.focus();
         input.select();
         input.addEventListener('keydown', e => {
+            if (e.isComposing || e.keyCode === 229) return;
             if (e.key === 'Enter') document.getElementById('modal-confirm').click();
             if (e.key === 'Escape') close(null);
         });
@@ -1526,7 +1547,13 @@ function renderMatrixTable() {
             const currentHint = Object.hasOwn(savedHints, product)
                 ? String(savedHints[product] || '').trim()
                 : getLegacyPackagingHint(shop, product);
-            const value = await showPrompt('修改包裝提示', `店家：${escapeHtml(shop)}<br>品項：${escapeHtml(product)}<br>例如：一包10個、單個`, currentHint, 'text');
+            const value = await showPrompt(
+                '修改包裝提示',
+                `店家：${escapeHtml(shop)}<br>品項：${escapeHtml(product)}<br>例如：一包10個、單個`,
+                currentHint,
+                'text',
+                { quickTags: ['4個一包', '10個一包', '30個一包', '50個一包', '清空'] }
+            );
             if (value === null) return;
 
             if (!shopDatabase[shop].packagingHints) shopDatabase[shop].packagingHints = {};
