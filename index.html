@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰智慧備貨與備貨系統 v3.0</title>
+    <title>竣泰智慧備貨與備貨系統 v3.1.1</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -1462,7 +1462,12 @@ async function loadSystem() {
             barcodes: defaultBarcodes
         });
         if (data && data.records) {
-            records      = data.records || [];
+            const recordMap = new Map();
+            (data.records || []).forEach(r => {
+                const key = `${r.shop}__${r.baseName}__${r.color}`;
+                recordMap.set(key, r);
+            });
+            records      = Array.from(recordMap.values());
             shopDatabase = (data.config && data.config.database) || {};
             productsTextarea.value = (data.config && data.config.products) || defaultProducts.join('\n');
             shopsTextarea.value    = (data.config && data.config.shops)    || defaultShops.join('\n');
@@ -1937,8 +1942,8 @@ function updateQtyFromGrid(prod, color, value) {
     const todayStr = new Date().toISOString().split('T')[0]; 
     const uniqueId = `${todayStr}_${shopName}_${prod}_${color}`;
     
-    // 移除舊紀錄 (篩選時改比對 ID)
-    records = records.filter(r => r.id !== uniqueId);
+    // 移除舊紀錄：同一店家、品項、顏色只能有一筆（不論舊紀錄是用何種日期生成的 ID）
+    records = records.filter(r => !(r.shop === shopName && r.baseName === prod && r.color === color));
     
     if (!isNaN(qty) && qty > 0 || existingNote) {
         records.push({
