@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰智慧備貨與備貨系統 v2.3</title>
+    <title>竣泰智慧備貨與備貨系統 v3.0</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -660,8 +660,16 @@
     </div>
     
 <script>
-  window.__firebasePromise = new Promise((resolve) => {
+  window.__firebaseReady = false;
+  window.__firebasePromise = new Promise((resolve, reject) => {
     window.__resolveFirebase = resolve;
+    window.__rejectFirebase = reject;
+    setTimeout(() => {
+      if (!window.__firebaseReady) {
+        console.warn("⚠️ Firebase 連線等待逾時 (6秒)");
+        reject(new Error("Firebase 連線逾時，請檢查網路或 Firestore 規則權限"));
+      }
+    }, 6000);
   });
 </script>
 <script type="module">
@@ -671,61 +679,71 @@
     getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, serverTimestamp 
   } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyDuTrJ0ECV2RlffUhm1IGvAPoPMi1L8_ZI",
-    authDomain: "jun-tai.firebaseapp.com",
-    projectId: "jun-tai",
-    storageBucket: "jun-tai.firebasestorage.app",
-    messagingSenderId: "687884864539",
-    appId: "1:687884864539:web:f443710e1ec31c4cd43cbe",
-    measurementId: "G-DTN6LCXZNM"
-  };
+  try {
+    const firebaseConfig = {
+      apiKey: "AIzaSyDuTrJ0ECV2RlffUhm1IGvAPoPMi1L8_ZI",
+      authDomain: "jun-tai.firebaseapp.com",
+      projectId: "jun-tai",
+      storageBucket: "jun-tai.firebasestorage.app",
+      messagingSenderId: "687884864539",
+      appId: "1:687884864539:web:f443710e1ec31c4cd43cbe",
+      measurementId: "G-DTN6LCXZNM"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    let analytics = null;
+    try {
+      analytics = getAnalytics(app);
+    } catch (e) {
+      console.warn("Analytics 略過（當前環境未支援或受限）：", e);
+    }
+    const db = getFirestore(app);
 
-  function getLocalDateKey() {
-    const now = new Date();
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    return `${y}-${m}-${d}`;
-  }
+    function getLocalDateKey() {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
 
-  window.FirebaseBackend = {
-    app,
-    analytics,
-    db,
+    window.FirebaseBackend = {
+      app,
+      analytics,
+      db,
 
-    // 1. 讀取所有資料（設定與暫存備貨清單）
-    async readAllData(defaults) {
-      const configRef = doc(db, 'app_config', 'system');
-      const configSnap = await getDoc(configRef);
-      let configData = {};
-      if (configSnap.exists()) {
-        configData = configSnap.data();
-      } else {
-        // 首次初始化：自動將預設資料存入 Firestore
-        configData = {
-          products: defaults.products.join('\n'),
-          shops: defaults.shops.join('\n'),
-          barcodes: defaults.barcodes.join('\n'),
-          database: { default: 5 },
-          updatedAt: serverTimestamp()
-        };
-        await setDoc(configRef, configData);
-      }
+      // 1. 讀取所有資料（設定與暫存備貨清單）
+      async readAllData(defaults) {
+        console.log("🔥 連線 Firestore 讀取中...");
+        const configRef = doc(db, 'app_config', 'system');
+        const configSnap = await getDoc(configRef);
+        let configData = {};
+        if (configSnap.exists()) {
+          configData = configSnap.data();
+          console.log("✅ 成功讀取現有 Firestore 設定");
+        } else {
+          // 首次初始化：自動將預設資料存入 Firestore
+          console.log("📝 首次初始化：寫入預設品項與店家設定至 Firestore...");
+          configData = {
+            products: defaults.products.join('\n'),
+            shops: defaults.shops.join('\n'),
+            barcodes: defaults.barcodes.join('\n'),
+            database: { default: 5 },
+            updatedAt: serverTimestamp()
+          };
+          await setDoc(configRef, configData);
+          console.log("✅ 首次設定已成功寫入 Firestore！");
+        }
 
-      const tempRef = doc(db, 'temp_orders', 'current');
-      const tempSnap = await getDoc(tempRef);
-      let records = [];
-      if (tempSnap.exists()) {
-        records = tempSnap.data().records || [];
-      }
+        const tempRef = doc(db, 'temp_orders', 'current');
+        const tempSnap = await getDoc(tempRef);
+        let records = [];
+        if (tempSnap.exists()) {
+          records = tempSnap.data().records || [];
+        }
 
-      return { records, config: configData };
-    },
+        return { records, config: configData };
+      },
 
     // 2. 即時同步暫存備貨單
     async saveToTempZone(records) {
@@ -847,6 +865,12 @@
   if (window.__resolveFirebase) {
     window.__resolveFirebase(window.FirebaseBackend);
   }
+} catch (err) {
+  console.error("❌ Firebase 初始化失敗：", err);
+  if (window.__rejectFirebase) {
+    window.__rejectFirebase(err);
+  }
+}
 </script>
 
 <script>
