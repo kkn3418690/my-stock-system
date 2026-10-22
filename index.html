@@ -660,12 +660,203 @@
     </div>
     
 <script>
+  window.__firebasePromise = new Promise((resolve) => {
+    window.__resolveFirebase = resolve;
+  });
+</script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+  import { 
+    getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, serverTimestamp 
+  } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDuTrJ0ECV2RlffUhm1IGvAPoPMi1L8_ZI",
+    authDomain: "jun-tai.firebaseapp.com",
+    projectId: "jun-tai",
+    storageBucket: "jun-tai.firebasestorage.app",
+    messagingSenderId: "687884864539",
+    appId: "1:687884864539:web:f443710e1ec31c4cd43cbe",
+    measurementId: "G-DTN6LCXZNM"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  const db = getFirestore(app);
+
+  function getLocalDateKey() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  window.FirebaseBackend = {
+    app,
+    analytics,
+    db,
+
+    // 1. 讀取所有資料（設定與暫存備貨清單）
+    async readAllData(defaults) {
+      const configRef = doc(db, 'app_config', 'system');
+      const configSnap = await getDoc(configRef);
+      let configData = {};
+      if (configSnap.exists()) {
+        configData = configSnap.data();
+      } else {
+        // 首次初始化：自動將預設資料存入 Firestore
+        configData = {
+          products: defaults.products.join('\n'),
+          shops: defaults.shops.join('\n'),
+          barcodes: defaults.barcodes.join('\n'),
+          database: { default: 5 },
+          updatedAt: serverTimestamp()
+        };
+        await setDoc(configRef, configData);
+      }
+
+      const tempRef = doc(db, 'temp_orders', 'current');
+      const tempSnap = await getDoc(tempRef);
+      let records = [];
+      if (tempSnap.exists()) {
+        records = tempSnap.data().records || [];
+      }
+
+      return { records, config: configData };
+    },
+
+    // 2. 即時同步暫存備貨單
+    async saveToTempZone(records) {
+      const tempRef = doc(db, 'temp_orders', 'current');
+      await setDoc(tempRef, {
+        records: records,
+        updatedAt: serverTimestamp()
+      });
+      return { status: "SUCCESS" };
+    },
+
+    // 3. 儲存出貨歷史紀錄（手動存檔）
+    async writeToHistoryZone(records, config) {
+      const validRecords = records.filter(r => (Number(r.qty) || 0) > 0 || (r.note && r.note.trim() !== ""));
+      if (validRecords.length === 0) {
+        throw new Error("目前沒有任何抄貨數據，無法存檔！");
+      }
+
+      const barcodeMap = {};
+      if (config && config.barcodes) {
+        config.barcodes.split('\n').forEach(line => {
+          const p = line.split('|');
+          if (p.length > 1) barcodeMap[p[0].trim()] = p.length > 2 ? p[2].trim() : p[1].trim();
+        });
+      }
+
+      const dateKey = getLocalDateKey();
+      const dateStr = dateKey.replace(/-/g, '/');
+
+      const chunkSize = 400;
+      for (let i = 0; i < validRecords.length; i += chunkSize) {
+        const chunk = validRecords.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        chunk.forEach(r => {
+          const docId = `${dateKey}_${r.id || Date.now() + '_' + Math.random().toString(36).substr(2, 5)}`;
+          const docRef = doc(db, 'history_orders', docId);
+          batch.set(docRef, {
+            dateKey: dateKey,
+            date: dateStr,
+            shop: r.shop || "",
+            name: r.name || "",
+            baseName: r.baseName || "",
+            color: r.color || "",
+            qty: Number(r.qty) || 0,
+            barcode: barcodeMap[r.shop] || "無",
+            note: r.note || "",
+            id: String(r.id || ""),
+            status: "已出貨",
+            updatedAt: serverTimestamp()
+          });
+        });
+        await batch.commit();
+      }
+      return { status: "SUCCESS", message: `今日抄貨 (${dateStr}) 已成功儲存至 Firebase！` };
+    },
+
+    // 4. 儲存後台設定
+    async updateSettingsZone(config) {
+      const configRef = doc(db, 'app_config', 'system');
+      await setDoc(configRef, {
+        products: config.products,
+        shops: config.shops,
+        barcodes: config.barcodes,
+        database: config.database,
+        updatedAt: serverTimestamp()
+      });
+      return { status: "SUCCESS" };
+    },
+
+    // 5. 查詢歷史訂單
+    async queryHistoryOrders(filters) {
+      const { startDate, endDate, shopMode, shops, productMode, products } = filters;
+      const constraints = [];
+      if (startDate) {
+        constraints.push(where('dateKey', '>=', startDate));
+      }
+      if (endDate) {
+        constraints.push(where('dateKey', '<=', endDate));
+      }
+
+      const q = query(collection(db, 'history_orders'), ...constraints);
+      const snapshot = await getDocs(q);
+
+      let orders = [];
+      let total = 0;
+      const selectedShops = shops || [];
+      const selectedProducts = products || [];
+
+      snapshot.forEach(docSnap => {
+        const row = docSnap.data();
+        if (shopMode !== 'all' && !selectedShops.includes(String(row.shop))) return;
+        const pName = String(row.baseName || row.name || '').replace(/^\[[^\]]+\]\s*/, '').trim();
+        if (productMode !== 'all' && !selectedProducts.includes(pName)) return;
+
+        const quantity = Number(row.qty) || 0;
+        total += quantity;
+        orders.push({
+          dateKey: row.dateKey,
+          date: row.date || row.dateKey.replace(/-/g, '/'),
+          shop: String(row.shop),
+          name: String(row.name || ''),
+          qty: quantity,
+          barcode: String(row.barcode || ''),
+          note: String(row.note || ''),
+          id: String(row.id || docSnap.id),
+          status: String(row.status || '已出貨')
+        });
+      });
+
+      orders.sort((a, b) => {
+        return b.dateKey.localeCompare(a.dateKey) || a.shop.localeCompare(b.shop, 'zh-Hant');
+      });
+
+      return { status: 'SUCCESS', orders, total };
+    }
+  };
+
+  window.__firebaseReady = true;
+  if (window.__resolveFirebase) {
+    window.__resolveFirebase(window.FirebaseBackend);
+  }
+</script>
+
+<script>
 'use strict';
 
 /* ════════════════════════════════════════════
    常數 & 預設資料
    ════════════════════════════════════════════ */
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-pzsjH1yRLpjQYkhrh1Y-wTd0q5x07MYbIRXi3W1pQ3tjSWNYffRNeVeQSq4-Mf0zyw/exec";
+// 【舊版 Google Apps Script 後端備份，已改由 Firebase Firestore 接手】
+// const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-pzsjH1yRLpjQYkhrh1Y-wTd0q5x07MYbIRXi3W1pQ3tjSWNYffRNeVeQSq4-Mf0zyw/exec";
 
 const defaultProducts = [
     "40x120","40x80","60x60","40x60","40x40","28x60","28x40","36x36",
@@ -983,28 +1174,26 @@ async function searchHistoryOrders() {
     }
 
     button.disabled = true;
-    button.textContent = '⏳ 正在查詢雲端資料...';
+    button.textContent = '⏳ 正在查詢 Firebase 資料...';
     summary.classList.add('history-loading');
     summary.textContent = '正在讀取歷史訂單';
     results.innerHTML = '<div class="empty-text">請稍候...</div>';
     try {
-        const queryUrl = new URL(SCRIPT_URL);
-        queryUrl.searchParams.set('action', 'queryHistory');
-        queryUrl.searchParams.set('startDate', startDate);
-        queryUrl.searchParams.set('endDate', endDate);
-        queryUrl.searchParams.set('shopMode', shopMode);
-        queryUrl.searchParams.set('shops', JSON.stringify(shops));
-        queryUrl.searchParams.set('productMode', productMode);
-        queryUrl.searchParams.set('products', JSON.stringify(products));
-        const response = await fetch(queryUrl);
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        const data = await response.json();
+        if (!window.__firebaseReady) await window.__firebasePromise;
+        const data = await window.FirebaseBackend.queryHistoryOrders({
+            startDate,
+            endDate,
+            shopMode,
+            shops,
+            productMode,
+            products
+        });
         if (data.status !== 'SUCCESS') throw new Error(data.message || '查詢失敗');
         renderHistoryResults(data.orders || [], data.total || 0);
     } catch (error) {
         summary.classList.remove('history-loading');
         summary.textContent = '查詢未完成';
-        results.innerHTML = `<div class="empty-text">${escapeHtml(error.message)}。請確認 GAS 已部署最新版本。</div>`;
+        results.innerHTML = `<div class="empty-text">${escapeHtml(error.message)}。請確認 Firebase 連線與 Firestore 規則權限。</div>`;
     } finally {
         button.disabled = false;
         button.textContent = '🔎 查詢雲端歷史訂單';
@@ -1201,25 +1390,16 @@ function buildPayload(action) {
     
 function saveAll() {
     clearTimeout(syncTimer);
-    syncTimer = setTimeout(() => {
-        setSyncStatus('syncing', '⏳ 正在即時同步至雲端 Excel...');
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(buildPayload('autoSave'))
-        })
-        .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-        .then(data => {
-            if (data && data.status === 'SUCCESS') {
-                setSyncStatus('synced', '🟢 雲端同步成功：' + new Date().toLocaleTimeString());
-            } else {
-                throw new Error(data.message || '後端寫入失敗');
-            }
-        })
-        .catch(err => {
+    syncTimer = setTimeout(async () => {
+        setSyncStatus('syncing', '⏳ 正在即時同步至 Firebase...');
+        try {
+            if (!window.__firebaseReady) await window.__firebasePromise;
+            await window.FirebaseBackend.saveToTempZone(records);
+            setSyncStatus('synced', '🟢 Firebase 同步成功：' + new Date().toLocaleTimeString());
+        } catch (err) {
             console.error('saveAll error:', err);
-            setSyncStatus('error', '❌ 雲端同步失敗！請檢查網路連線');
-        });
+            setSyncStatus('error', '❌ Firebase 同步失敗：' + (err.message || '請檢查網路連線'));
+        }
     }, 800);   // 800ms debounce
 }
 
@@ -1233,20 +1413,12 @@ document.getElementById('manualSyncBtn').addEventListener('click', async functio
     const orig = this.innerHTML;
     this.innerHTML = '⏳ 儲存中...';
     try {
-        const res = await fetch(SCRIPT_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(buildPayload('saveHistory')) // 必須傳入 'saveHistory'
-        });
-        const data = await res.json();
-        if (data && data.status === 'SUCCESS') {
-            showToast('✅ ' + (data.message || '今日抄貨已成功儲存！'), 'success');
-        } else {
-            throw new Error(data.message || '後端寫入失敗');
-        }
+        if (!window.__firebaseReady) await window.__firebasePromise;
+        const res = await window.FirebaseBackend.writeToHistoryZone(records, buildPayload('saveHistory').config);
+        showToast('✅ ' + (res.message || '今日抄貨已成功儲存至 Firebase！'), 'success');
     } catch (err) {
         console.error('manual sync error:', err);
-        showToast('❌ 儲存失敗：' + err.message, 'error', 5000);
+        showToast('❌ 儲存失敗：' + (err.message || '請檢查連線'), 'error', 5000);
     } finally {
         this.disabled = false;
         this.innerHTML = orig;
@@ -1256,45 +1428,48 @@ document.getElementById('manualSyncBtn').addEventListener('click', async functio
 /* ════════════════════════════════════════════
    載入系統
    ════════════════════════════════════════════ */
-function loadSystem() {
-    setSyncStatus('syncing', '🔍 正在從雲端讀取最新資料...');
-    fetch(SCRIPT_URL)
-        .then(res => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
-        .then(data => {
-            if (data && data.records) {
-                records      = data.records || [];
-                shopDatabase = data.config.database || {};
-                productsTextarea.value = data.config.products || defaultProducts.join('\n');
-                shopsTextarea.value    = data.config.shops    || defaultShops.join('\n');
-                currentBarcodesRaw     = data.config.barcodes || defaultBarcodes.join('\n');
-            } else {
-                productsTextarea.value = defaultProducts.join('\n');
-                shopsTextarea.value    = defaultShops.join('\n');
-                currentBarcodesRaw     = defaultBarcodes.join('\n');
-            }
-            baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(Boolean);
-            baseShops    = shopsTextarea.value.split('\n').map(s => s.trim()).filter(Boolean);
-            buildShopSelectOptions();
-            renderBarcodeRulesUI();
-            renderShopRulesUI();
-            renderMatrixTable();
-            updateUI();
-            setSyncStatus('synced', '🟢 已成功載入最新雲端資料');
-        })
-        .catch(err => {
-            console.error('loadSystem error:', err);
+async function loadSystem() {
+    setSyncStatus('syncing', '🔍 正在連線 Firebase 資料庫...');
+    try {
+        if (!window.__firebaseReady) await window.__firebasePromise;
+        const data = await window.FirebaseBackend.readAllData({
+            products: defaultProducts,
+            shops: defaultShops,
+            barcodes: defaultBarcodes
+        });
+        if (data && data.records) {
+            records      = data.records || [];
+            shopDatabase = (data.config && data.config.database) || {};
+            productsTextarea.value = (data.config && data.config.products) || defaultProducts.join('\n');
+            shopsTextarea.value    = (data.config && data.config.shops)    || defaultShops.join('\n');
+            currentBarcodesRaw     = (data.config && data.config.barcodes) || defaultBarcodes.join('\n');
+        } else {
             productsTextarea.value = defaultProducts.join('\n');
             shopsTextarea.value    = defaultShops.join('\n');
             currentBarcodesRaw     = defaultBarcodes.join('\n');
-            baseProducts = defaultProducts;
-            baseShops    = defaultShops;
-            buildShopSelectOptions();
-            renderBarcodeRulesUI();
-            renderShopRulesUI();
-            renderMatrixTable();
-            updateUI();
-            setSyncStatus('error', '❌ 無法載入線上資料（離線模式）');
-        });
+        }
+        baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(Boolean);
+        baseShops    = shopsTextarea.value.split('\n').map(s => s.trim()).filter(Boolean);
+        buildShopSelectOptions();
+        renderBarcodeRulesUI();
+        renderShopRulesUI();
+        renderMatrixTable();
+        updateUI();
+        setSyncStatus('synced', '🟢 已成功載入 Firebase 資料庫');
+    } catch (err) {
+        console.error('loadSystem error:', err);
+        productsTextarea.value = defaultProducts.join('\n');
+        shopsTextarea.value    = defaultShops.join('\n');
+        currentBarcodesRaw     = defaultBarcodes.join('\n');
+        baseProducts = defaultProducts;
+        baseShops    = defaultShops;
+        buildShopSelectOptions();
+        renderBarcodeRulesUI();
+        renderShopRulesUI();
+        renderMatrixTable();
+        updateUI();
+        setSyncStatus('error', '❌ 無法載入 Firebase 資料庫（離線模式，請確認 Firestore 權限規則）');
+    }
 }
 
 /* ════════════════════════════════════════════
@@ -1973,32 +2148,29 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
         shopDatabase[shop].shopRule = input.value.trim();
     });
 
-    // 3. 【關鍵修改】發送請求給後端，指定 action 為 "saveSettings"
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-            action: "saveSettings", 
-            config: {
+    // 3. 發送請求給 Firebase
+    const saveBtn = document.getElementById('saveSettingsBtn');
+    const origText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = '💾 儲存中...';
+    (async () => {
+        try {
+            if (!window.__firebaseReady) await window.__firebasePromise;
+            await window.FirebaseBackend.updateSettingsZone({
                 products: productsTextarea.value,
                 shops:    shopsTextarea.value,
                 barcodes: currentBarcodesRaw,
                 database: shopDatabase
-            }
-        })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.status === 'SUCCESS') {
-            showToast('💾 後台設定已成功儲存至雲端！', 'success');
-        } else {
-            showToast('❌ 設定儲存失敗：' + data.message, 'error');
+            });
+            showToast('💾 後台設定已成功儲存至 Firebase！', 'success');
+        } catch (err) {
+            console.error('saveSettings error:', err);
+            showToast('❌ 設定儲存失敗：' + (err.message || '請檢查連線與 Firestore 規則'), 'error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.textContent = origText;
         }
-    })
-    .catch(err => {
-        console.error(err);
-        showToast('❌ 連線錯誤，請檢查網路', 'error');
-    });
+    })();
 
     // 4. 重新渲染畫面
     buildShopSelectOptions();
