@@ -1,15 +1,44 @@
 // ==========================================
-// 後端 GAS 完整架構程式 (已調整存檔邏輯)
+// 後端 GAS 完整架構程式 (已改用分頁儲存 Database 以突破字數限制)
 // ==========================================
 // 定義分頁名稱，方便未來修改
 var SHEET_NAMES = {
   HISTORY: "歷史訂單",
   TEMP: "線上資料佔存區",
-  SETTINGS: "後台資料"
+  SETTINGS: "後台資料",
+  DATABASE: "資料庫"  // <-- 【新增】獨立的資料庫分頁，解決 M2 字數不夠的問題
+};
+
+var SHEET_LAYOUT = {
+  SETTINGS: { PRODUCTS: "A2", SHOPS: "B2", BARCODES: "C2", NOTICE: "D2" },
+  TEMP: { START_ROW: 5, START_COLUMN: 1, COLUMN_COUNT: 8 }
 };
 
 function doGet(e) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (e && e.parameter && e.parameter.action === "queryHistory") {
+    var shops = [];
+    var products = [];
+    try {
+      shops = e.parameter.shops ? JSON.parse(e.parameter.shops) : [];
+      products = e.parameter.products ? JSON.parse(e.parameter.products) : [];
+    } catch (error) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "ERROR",
+        message: "店家或商品查詢條件格式錯誤"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var result = queryHistoryOrders(ss, {
+      startDate: e.parameter.startDate || "",
+      endDate: e.parameter.endDate || "",
+      shopMode: e.parameter.shopMode || "all",
+      shops: shops,
+      productMode: e.parameter.productMode || "all",
+      products: products
+    });
+    return ContentService.createTextOutput(JSON.stringify(result))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
   return ContentService.createTextOutput(JSON.stringify(readAllData(ss)))
     .setMimeType(ContentService.MimeType.JSON);
 }
@@ -20,128 +49,338 @@ function doPost(e) {
     var action = postData.action || "";
     var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-    if (action === "saveHistory") {
+    if (action === "queryHistory") {
+      var result = queryHistoryOrders(ss, postData);
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+
+    } else if (action === "saveHistory") {
       // 指定寫入「歷史訂單」頁
       var sheet = ss.getSheetByName(SHEET_NAMES.HISTORY);
-      var result = writeToHistoryZone(sheet, postData.records || [], postData.config || {});
+         var result = withScriptLock(function() {
+           return writeToHistoryZone(sheet, postData.records || [], postData.config || {});
+         });
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 
     } else if (action === "saveSettings") {
-      // 指定寫入「後台資料」頁
-      var sheet = ss.getSheetByName(SHEET_NAMES.SETTINGS);
-      var result = updateSettingsZone(sheet, postData.config || {});
+      // 指定寫入「後台資料」與「資料庫」頁
+         var result = withScriptLock(function() {
+           return updateSettingsZone(ss, postData.config || {});
+         });
       return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
 
-    } else {
+    } else if (action === "autoSave") {
       // 指定寫入「線上資料佔存區」頁
-      var sheet = ss.getSheetByName(SHEET_NAMES.TEMP);
-      saveToTempZone(sheet, postData.records || []);
+         withScriptLock(function() {
+           var sheet = ss.getSheetByName(SHEET_NAMES.TEMP);
+           saveToTempZone(sheet, postData.records || []);
+           // 建議上限存放在獨立資料庫分頁，自動暫存時也要同步更新
+           if (postData.config) updateSettingsZone(ss, postData.config);
+         });
       return ContentService.createTextOutput(JSON.stringify({
-        status: "SUCCESS", 
-        message: "自動暫存成功"
+        status: "SUCCESS",
+        message: "自動暫存與資料庫設定同步成功"
+      })).setMimeType(ContentService.MimeType.JSON);
+    } else {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "ERROR",
+        message: "不支援的 action：" + action
       })).setMimeType(ContentService.MimeType.JSON);
     }
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({
-      status: "ERROR", 
+      status: "ERROR",
       message: error.toString()
     })).setMimeType(ContentService.MimeType.JSON);
   }
 }
 
+function withScriptLock(callback) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    return callback();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 // ---------------- 核心功能 ----------------
+function queryHistoryOrders(ss, filters) {
+  var sheet = ss.getSheetByName(SHEET_NAMES.HISTORY);
+  if (!sheet) return { status: "ERROR", message: "找不到歷史訂單工作表" };
+
+  var shopMode = filters.shopMode || "all";
+  var selectedShops = Array.isArray(filters.shops) ? filters.shops : [];
+  var productMode = filters.productMode || "all";
+  var selectedProducts = Array.isArray(filters.products) ? filters.products : [];
+  if (shopMode !== "all" && selectedShops.length === 0) {
+    return { status: "ERROR", message: "請至少選擇一家店家" };
+  }
+  if (productMode !== "all" && selectedProducts.length === 0) {
+    return { status: "ERROR", message: "請至少選擇一項商品" };
+  }
+  if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+    return { status: "ERROR", message: "開始日期不可晚於結束日期" };
+  }
+
+  var lastRow = sheet.getLastRow();
+  if (lastRow < 5) return { status: "SUCCESS", orders: [], total: 0 };
+
+  var values = sheet.getRange(5, 1, lastRow - 4, 9).getValues();
+  var orders = [];
+  var total = 0;
+  values.forEach(function(row) {
+    if (!row[0] || !row[1]) return;
+    var dateKey = historyDateKey(row[0]);
+    if (!dateKey) return;
+    if (filters.startDate && dateKey < filters.startDate) return;
+    if (filters.endDate && dateKey > filters.endDate) return;
+    if (shopMode !== "all" && selectedShops.indexOf(String(row[1])) < 0) return;
+    if (productMode !== "all" && selectedProducts.indexOf(historyProductName(row[2])) < 0) return;
+
+    var quantity = Number(row[3]) || 0;
+    total += quantity;
+    orders.push({
+      dateKey: dateKey,
+      date: dateKey.replace(/-/g, "/"),
+      shop: String(row[1]),
+      name: String(row[2] || ""),
+      qty: quantity,
+      barcode: String(row[4] || ""),
+      note: String(row[6] || ""),
+      id: String(row[7] || ""),
+      status: String(row[8] || "")
+    });
+  });
+
+  orders.sort(function(a, b) {
+    return b.dateKey.localeCompare(a.dateKey) || a.shop.localeCompare(b.shop, "zh-Hant");
+  });
+  return { status: "SUCCESS", orders: orders, total: total };
+}
+
+function historyProductName(value) {
+  return String(value || "").replace(/^\[[^\]]+\]\s*/, "").trim();
+}
+
+function historyDateKey(value) {
+  var timeZone = Session.getScriptTimeZone();
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, timeZone, "yyyy-MM-dd");
+  }
+
+  var text = String(value || "").trim();
+  var isoMatch = text.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (isoMatch) {
+    return isoMatch[1] + "-" + ("0" + isoMatch[2]).slice(-2) + "-" + ("0" + isoMatch[3]).slice(-2);
+  }
+
+  var localMatch = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (localMatch) {
+    return localMatch[3] + "-" + ("0" + localMatch[1]).slice(-2) + "-" + ("0" + localMatch[2]).slice(-2);
+  }
+
+  var parsed = new Date(text);
+  return isNaN(parsed.getTime()) ? "" : Utilities.formatDate(parsed, timeZone, "yyyy-MM-dd");
+}
+
 function readAllData(ss) {
+     var lock = LockService.getScriptLock();
+     lock.waitLock(30000);
+     try {
   var sheetSettings = ss.getSheetByName(SHEET_NAMES.SETTINGS);
   var sheetTemp = ss.getSheetByName(SHEET_NAMES.TEMP);
+  var sheetDb = ss.getSheetByName(SHEET_NAMES.DATABASE);
 
-  // 1. 從設定頁抓取 J2:M2
+  // 1. 讀取資料庫分頁 (取代原本的 M2 JSON)
+  var db = {};
+  if (sheetDb) {
+    var lastDbRow = sheetDb.getLastRow();
+    if (lastDbRow >= 2) { // 假設第 1 列是標題
+      var dbValues = sheetDb.getRange(2, 1, lastDbRow - 1, 2).getValues(); // 假設 A 欄放 Key，B 欄放 Value(JSON字串)
+      dbValues.forEach(function(row) {
+        if (row[0]) {
+          try {
+            db[row[0]] = JSON.parse(row[1]);
+          } catch (e) {
+            db[row[0]] = row[1]; // 如果不是 JSON 就直接帶入字串
+          }
+        }
+      });
+    }
+  }
+
+  // 如果讀取出來的資料庫是空的，給予預設值 (5)
+  if (Object.keys(db).length === 0) {
+    db = { default: 5 };
+  }
+
   var config = {
-    products: sheetSettings.getRange("J2").getValue(),
-    shops: sheetSettings.getRange("K2").getValue(),
-    barcodes: sheetSettings.getRange("L2").getValue(),
-    database: JSON.parse(sheetSettings.getRange("M2").getValue() || "{}")
+    products: sheetSettings.getRange(SHEET_LAYOUT.SETTINGS.PRODUCTS).getValue(),
+    shops: sheetSettings.getRange(SHEET_LAYOUT.SETTINGS.SHOPS).getValue(),
+    barcodes: sheetSettings.getRange(SHEET_LAYOUT.SETTINGS.BARCODES).getValue(),
+    database: db
   };
 
   // 2. 從暫存頁 (線上資料佔存區) 抓取記錄
   var lastRow = sheetTemp.getLastRow();
   var records = [];
-  
-  if (lastRow >= 5) {
-    // 假設暫存區數據是從 O5 到 V 欄
-    var values = sheetTemp.getRange("O5:V" + lastRow).getValues();
+
+  if (lastRow >= SHEET_LAYOUT.TEMP.START_ROW) {
+    var values = sheetTemp.getRange(
+      SHEET_LAYOUT.TEMP.START_ROW,
+      SHEET_LAYOUT.TEMP.START_COLUMN,
+      lastRow - SHEET_LAYOUT.TEMP.START_ROW + 1,
+      SHEET_LAYOUT.TEMP.COLUMN_COUNT
+    ).getValues();
     values.forEach(function(row) {
       if (row[0]) { // 確保 ID 欄位有值
         records.push({
-          id: row[0], 
-          shop: row[1], 
-          name: row[2], 
+          id: row[0],
+          shop: row[1],
+          name: row[2],
           baseName: row[3],
-          color: row[4], 
-          qty: row[5], 
-          isReturn: row[6], 
+          color: row[4],
+          qty: row[5],
+          isReturn: row[6],
           note: row[7]
         });
       }
     });
   }
-  
+
   return { records: records, config: config };
+     } finally {
+       lock.releaseLock();
+     }
 }
 
-// 區域 1：歷史記錄同步 (今日數據去重後寫入，歷史資料不受影響)
+// 區域 1：歷史記錄同步
 function writeToHistoryZone(sheet, records, config) {
-  // 1. 只過濾有效的資料 (數量 > 0 或有備註)
   var validRecords = records.filter(r => r.qty > 0 || (r.note && r.note.trim() !== ""));
-  if (validRecords.length === 0) return { status: "ERROR", message: "沒有資料可寫入" };
+  if (validRecords.length === 0) return { status: "ERROR", message: "沒有有效資料可更新" };
 
-  // 2. 解析條碼映射
   var barcodeMap = {};
   if (config.barcodes) {
     config.barcodes.split("\n").forEach(line => {
       var p = line.split("|");
-      if (p.length > 1) barcodeMap[p[0].trim()] = p.length > 2 ? p[2].trim() : p[1].trim(); 
+      if (p.length > 1) barcodeMap[p[0].trim()] = p.length > 2 ? p[2].trim() : p[1].trim();
     });
   }
 
-  // 3. 準備寫入的資料列 (直接組裝，不比對任何舊資料)
+  var lastRow = sheet.getLastRow();
+  var allData = lastRow < 5 ? [] : sheet.getRange(5, 1, lastRow - 4, 9).getValues();
   var today = new Date().toLocaleDateString();
-  var rows = validRecords.map(r => [
-    today, 
-    r.shop, 
-    r.name, 
-    r.qty, 
-    barcodeMap[r.shop] || "無", 
-    r.qty, 
-    r.note || "", 
-    r.id, 
+
+  var preservedData = allData.filter(row => {
+    var rowDate = new Date(row[0]).toLocaleDateString();
+    return rowDate !== today;
+  });
+
+  var todayRecords = validRecords.map(r => [
+    today,
+    r.shop,
+    r.name,
+    r.qty,
+    barcodeMap[r.shop] || "無",
+    r.qty,
+    r.note || "",
+    r.id,
     "已抄貨"
   ]);
 
-  // 4. 直接寫入最後一行之後
-  var lastRow = sheet.getLastRow();
-  // 若小於第 5 行，則從第 5 行開始寫
-  var startRow = Math.max(lastRow + 1, 5);
-  
-  sheet.getRange(startRow, 1, rows.length, 9).setValues(rows);
+  var finalData = preservedData.concat(todayRecords);
 
-  return { status: "SUCCESS", message: "測試寫入完成，已直接追加到表格末端" };
+  if (lastRow >= 5) {
+    sheet.getRange(5, 1, lastRow - 4, 9).clearContent();
+  }
+
+  if (finalData.length > 0) {
+    sheet.getRange(5, 1, finalData.length, 9).setValues(finalData);
+  }
+
+  return { status: "SUCCESS", message: "同步完成：已保留歷史日期資料，並僅更新今日(" + today + ")的項目。" };
 }
 
 // 區域 2：暫存區同步
 function saveToTempZone(sheet, records) {
   var lastRow = sheet.getLastRow();
-  if (lastRow >= 5) sheet.getRange("O5:V" + Math.max(lastRow, 5)).clearContent();
   if (records.length > 0) {
     var rows = records.map(r => [r.id, r.shop, r.name, r.baseName, r.color, r.qty, r.isReturn, r.note]);
-    sheet.getRange(5, 15, rows.length, 8).setValues(rows);
+    sheet.getRange(
+      SHEET_LAYOUT.TEMP.START_ROW,
+      SHEET_LAYOUT.TEMP.START_COLUMN,
+      rows.length,
+      SHEET_LAYOUT.TEMP.COLUMN_COUNT
+    ).setValues(rows);
+  }
+  var oldLastDataRow = Math.max(lastRow, SHEET_LAYOUT.TEMP.START_ROW);
+  var firstStaleRow = SHEET_LAYOUT.TEMP.START_ROW + records.length;
+  if (firstStaleRow <= oldLastDataRow) {
+    sheet.getRange(
+      firstStaleRow,
+      SHEET_LAYOUT.TEMP.START_COLUMN,
+      oldLastDataRow - firstStaleRow + 1,
+      SHEET_LAYOUT.TEMP.COLUMN_COUNT
+    ).clearContent();
   }
 }
 
-// 區域 3：後台設定
-function updateSettingsZone(sheet, config) {
-  sheet.getRange("J2").setValue(config.products);
-  sheet.getRange("K2").setValue(config.shops);
-  sheet.getRange("L2").setValue(config.barcodes);
-  sheet.getRange("M2").setValue(JSON.stringify(config.database));
+// 區域 3：後台設定 (包含資料庫排序與獨立分頁寫入)
+function updateSettingsZone(ss, config) {
+  var sheetSettings = ss.getSheetByName(SHEET_NAMES.SETTINGS);
+
+  // 1. 寫入 A2, B2, C2 基本設定
+  sheetSettings.getRange(SHEET_LAYOUT.SETTINGS.PRODUCTS).setValue(config.products);
+  sheetSettings.getRange(SHEET_LAYOUT.SETTINGS.SHOPS).setValue(config.shops);
+  sheetSettings.getRange(SHEET_LAYOUT.SETTINGS.BARCODES).setValue(config.barcodes);
+
+  // 2. 處理資料庫分頁 (Database)
+  var sheetDb = ss.getSheetByName(SHEET_NAMES.DATABASE);
+  if (!sheetDb) {
+    // 如果「資料庫」分頁不存在，自動幫你建立一個
+    sheetDb = ss.insertSheet(SHEET_NAMES.DATABASE);
+  }
+
+  // 清除舊的資料庫內容 (保留標題列，從第 2 列開始清除)
+  var lastDbRow = sheetDb.getLastRow();
+  if (lastDbRow >= 2) {
+    sheetDb.getRange(2, 1, lastDbRow - 1, 2).clearContent();
+  } else if (lastDbRow === 1) {
+    // 確保有標題
+    sheetDb.getRange("A1").setValue("Key / ID");
+    sheetDb.getRange("B1").setValue("Data Value");
+  } else {
+    // 空白分頁時寫入標題
+    sheetDb.getRange("A1").setValue("Key / ID");
+    sheetDb.getRange("B1").setValue("Data Value");
+  }
+
+  // 3. 將前端傳入的 database 物件轉成陣列並「依店家/Key 順序排序」
+  var dbObj = config.database || {};
+  var dbKeys = Object.keys(dbObj);
+
+  // 根據 Key（或店家順序）進行排序
+  dbKeys.sort(function(a, b) {
+    return a.localeCompare(b, 'zh-Hant'); // 使用中文筆畫/拼音排序
+  });
+
+  // 組合要寫入的資料列
+  var rowsToWrite = [];
+  dbKeys.forEach(function(key) {
+    var val = dbObj[key];
+    var valString = (typeof val === 'object') ? JSON.stringify(val) : val;
+    rowsToWrite.push([key, valString]);
+  });
+
+  // 4. 批次寫入排序後的資料到「資料庫」分頁
+  if (rowsToWrite.length > 0) {
+    sheetDb.getRange(2, 1, rowsToWrite.length, 2).setValues(rowsToWrite);
+  }
+
+  // 5. 在 D2 顯示資料庫儲存提示
+  sheetSettings.getRange(SHEET_LAYOUT.SETTINGS.NOTICE)
+    .setValue("資料已轉移至【資料庫】分頁儲存，無容量限制。");
+
   return { status: "SUCCESS" };
 }
