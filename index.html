@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰智慧備貨與備貨系統 v3.1.1</title>
+    <title>竣泰智慧備貨與備貨系統 v3.1.2</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -1411,6 +1411,31 @@ function buildPayload(action) {
         }
     };
 }
+
+let settingsSaveQueue = Promise.resolve();
+
+async function saveSettingsToCloud(successMessage) {
+    const savePromise = settingsSaveQueue.then(async () => {
+        if (!window.__firebaseReady) await window.__firebasePromise;
+        await window.FirebaseBackend.updateSettingsZone({
+            products: productsTextarea.value,
+            shops: shopsTextarea.value,
+            barcodes: currentBarcodesRaw,
+            database: shopDatabase
+        });
+    });
+    settingsSaveQueue = savePromise.then(() => undefined, () => undefined);
+
+    try {
+        await savePromise;
+        showToast(successMessage, 'success', 2500);
+        return true;
+    } catch (err) {
+        console.error('settings sync error:', err);
+        showToast('⚠️ 設定已套用於目前畫面，但雲端儲存失敗：' + (err.message || '請檢查連線與 Firestore 規則'), 'error', 5000);
+        return false;
+    }
+}
     
 function saveAll() {
     clearTimeout(syncTimer);
@@ -1763,9 +1788,8 @@ function renderMatrixTable() {
             if (!shopDatabase[shop].packagingHints) shopDatabase[shop].packagingHints = {};
             const hint = value.trim();
             shopDatabase[shop].packagingHints[product] = hint;
-            saveAll();
             renderMatrixTable();
-            showToast(hint ? `✅ ${product} 包裝提示已儲存` : `已清除 ${product} 包裝提示`, 'success');
+            await saveSettingsToCloud(hint ? `✅ ${product} 包裝提示已儲存至雲端` : `✅ 已清除 ${product} 包裝提示並同步雲端`);
         });
     });
 
@@ -1786,9 +1810,8 @@ function renderMatrixTable() {
                     COLORS.forEach(c => shopDatabase[shopName].suggestQty[prod][c] = num);
                 }
             });
-            saveAll();
             renderMatrixTable();
-            showToast(`✅ 已將群組「${gName}」全數設為 ${num}`, 'success');
+            await saveSettingsToCloud(`✅ 已將群組「${gName}」上限設為 ${num} 並同步雲端`);
         });
     });
 
@@ -1804,11 +1827,9 @@ function renderMatrixTable() {
             
             const num = parseInt(val, 10);
             if (isNaN(num) || num < 0) return;
-            
             COLORS.forEach(c => shopDatabase[shopName].suggestQty[prod][c] = num);
-            saveAll();
             renderMatrixTable();
-            showToast(`✅ ${prod} 全色系上限已更新`, 'success');
+            await saveSettingsToCloud(`✅ ${prod} 全色系上限已更新並同步雲端`);
         });
     });
     
@@ -1903,9 +1924,8 @@ async function quickEditSingleLimit(prod, color, currentVal) {
     const num = parseInt(val, 10);
     if (isNaN(num) || num < 0) { showToast('請輸入有效的正整數', 'warning'); return; }
     shopDatabase[shopName].suggestQty[prod][color] = num;
-    saveAll();
     renderMatrixTable();
-    showToast(`✅ 已更新 ${prod}（${color}）上限為 ${num}`, 'success', 2000);
+    await saveSettingsToCloud(`✅ 已更新 ${prod}（${color}）上限為 ${num} 並同步雲端`);
 }
 
 async function bulkEditGroupLimit(groupName, color) {
@@ -1926,9 +1946,8 @@ async function bulkEditGroupLimit(groupName, color) {
         }
         shopDatabase[shopName].suggestQty[prod][color] = num;
     });
-    saveAll();
     renderMatrixTable();
-    showToast(`✅ 整組「${groupName}」${color}色上限已更新為 ${num}`, 'success', 2500);
+    await saveSettingsToCloud(`✅ 整組「${groupName}」${color}色上限已更新為 ${num} 並同步雲端`);
 }
 
 // 修改 updateQtyFromGrid 內的 ID 生成部分
@@ -2183,22 +2202,9 @@ document.getElementById('saveSettingsBtn').addEventListener('click', () => {
     saveBtn.disabled = true;
     saveBtn.textContent = '💾 儲存中...';
     (async () => {
-        try {
-            if (!window.__firebaseReady) await window.__firebasePromise;
-            await window.FirebaseBackend.updateSettingsZone({
-                products: productsTextarea.value,
-                shops:    shopsTextarea.value,
-                barcodes: currentBarcodesRaw,
-                database: shopDatabase
-            });
-            showToast('💾 後台設定已成功儲存至 Firebase！', 'success');
-        } catch (err) {
-            console.error('saveSettings error:', err);
-            showToast('❌ 設定儲存失敗：' + (err.message || '請檢查連線與 Firestore 規則'), 'error');
-        } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = origText;
-        }
+        await saveSettingsToCloud('💾 後台設定已成功儲存至 Firebase！');
+        saveBtn.disabled = false;
+        saveBtn.textContent = origText;
     })();
 
     // 4. 重新渲染畫面
