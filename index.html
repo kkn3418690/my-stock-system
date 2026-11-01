@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰智慧備貨與備貨系統 v3.1.1</title>
+    <title>竣泰智慧備貨與備貨系統 v3.1.2</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -274,6 +274,56 @@
             text-decoration: line-through;
             color: #94a3b8 !important;
         }
+        .summary-mode-tabs { display: flex; justify-content: center; gap: 8px; margin: 8px 0 12px; }
+        .summary-mode-btn {
+            flex: 1;
+            max-width: 260px;
+            min-height: 42px;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #e2e8f0;
+            color: #334155;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .summary-mode-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+        .packing-shop-filter { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; max-height: 180px; overflow-y: auto; margin-bottom: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; }
+        .packing-shop-option { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; }
+        .packing-shop-option:has(input:checked) { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
+        .packing-shop-option input { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; accent-color: var(--primary); }
+        .packing-shop-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+            gap: 8px;
+            margin-bottom: 12px;
+            padding: 10px;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            background: #f8fafc;
+        }
+        .packing-shop-group > .shop-title { grid-column: 1 / -1; margin: 0; }
+        .packing-product { min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+        .packing-product-title { margin-bottom: 6px; font-size: 14px; font-weight: 700; }
+        .packing-note { margin: 4px 0 7px; color: #2563eb; font-size: 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+        .packing-item {
+            display: flex;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 5px;
+            padding: 9px 10px;
+            border: 1px solid rgba(0,0,0,0.1);
+            border-radius: 7px;
+            color: #111;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .packing-item.checked { background: #e2e8f0 !important; opacity: 0.5; text-decoration: line-through; }
+        .packing-item:disabled { cursor: wait; }
 
         /* ── 歷史明細 ── */
         .history-item {
@@ -547,24 +597,40 @@
 
     <!-- ── 備貨清單分頁 ── -->
     <div id="summary-tab" class="tab-content">
-        <h1>📦 倉庫拿貨清單</h1>
-        <div class="card">
-            <div style="margin-bottom: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc;">
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
-                    <span style="font-size: 13px; font-weight: 700;">🏪 選擇要顯示的店家</span>
-                    <div style="display: flex; gap: 6px;">
-                        <button type="button" id="summaryShopSelectAll" class="icon-btn" style="font-size: 12px; padding: 5px 8px;">全選</button>
-                        <button type="button" id="summaryShopSelectNone" class="icon-btn" style="font-size: 12px; padding: 5px 8px;">全不選</button>
-                    </div>
-                </div>
-                <div id="summaryShopFilter" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; max-height: 180px; overflow-y: auto;"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span id="summaryShopCount" style="font-weight: 700; color:#0f172a;">📊 全店總備貨加總統計</span>
-                <button type="button" id="copyBtn" class="icon-btn" style="background:#e2e8f0; color:#334155; font-size:13px; padding:6px 10px;">📋 複製文字</button>
-            </div>
-            <div id="summaryList"><div class="empty-text">暫無加總數據</div></div>
+        <div class="summary-mode-tabs" role="tablist" aria-label="備貨工作清單">
+            <button type="button" class="summary-mode-btn active" id="summaryStockViewBtn" role="tab" aria-selected="true" aria-controls="summaryStockView">📦 倉庫拿貨清單</button>
+            <button type="button" class="summary-mode-btn" id="summaryPackingViewBtn" role="tab" aria-selected="false" aria-controls="summaryPackingView">📋 理貨打包清單</button>
         </div>
+        <section id="summaryStockView" class="summary-view" role="tabpanel" aria-labelledby="summaryStockViewBtn">
+            <div class="card">
+                <div style="margin-bottom: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px;">
+                        <span style="font-size: 13px; font-weight: 700;">🏪 選擇要顯示的店家</span>
+                        <div style="display: flex; gap: 6px;">
+                            <button type="button" id="summaryShopSelectAll" class="icon-btn" style="font-size: 12px; padding: 5px 8px;">全選</button>
+                            <button type="button" id="summaryShopSelectNone" class="icon-btn" style="font-size: 12px; padding: 5px 8px;">全不選</button>
+                        </div>
+                    </div>
+                    <div id="summaryShopFilter" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; max-height: 180px; overflow-y: auto;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <span id="summaryShopCount" style="font-weight: 700; color:#0f172a;">📊 全店總備貨加總統計</span>
+                    <button type="button" id="copyBtn" class="icon-btn" style="background:#e2e8f0; color:#334155; font-size:13px; padding:6px 10px;">📋 複製文字</button>
+                </div>
+                <div id="summaryList"><div class="empty-text">暫無加總數據</div></div>
+            </div>
+        </section>
+        <section id="summaryPackingView" class="summary-view" role="tabpanel" aria-labelledby="summaryPackingViewBtn" hidden>
+            <div class="card">
+                <h1>📋 理貨打包清單</h1>
+                <p style="margin-bottom:10px; color:var(--text-muted); font-size:12px;">點擊商品可標記完成，再點一次即可取消；完成狀態會同步至 Firebase，並依今天的日期分開記錄。</p>
+                <div style="margin-bottom: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc;">
+                    <div style="margin-bottom: 8px; font-size: 13px; font-weight: 700;">🏪 選擇要打包的店家（單選）</div>
+                    <div id="packingShopFilter" class="packing-shop-filter"></div>
+                </div>
+                <div id="packingList"><div class="empty-text">暫無打包資料</div></div>
+            </div>
+        </section>
     </div>
 
     <div id="delivery-tab" class="tab-content">
@@ -686,7 +752,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
   import { 
-    getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, writeBatch, serverTimestamp 
+    getFirestore, doc, getDoc, setDoc, arrayUnion, arrayRemove, collection, query, where, getDocs, writeBatch, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-firestore.js";
 
   try {
@@ -747,12 +813,12 @@
 
         const tempRef = doc(db, 'temp_orders', 'current');
         const tempSnap = await getDoc(tempRef);
+        const tempData = tempSnap.exists() ? tempSnap.data() : {};
         let records = [];
-        if (tempSnap.exists()) {
-          records = tempSnap.data().records || [];
-        }
+        records = tempData.records || [];
+        const packingChecked = tempData.packingCheckedByDate?.[getLocalDateKey()] || [];
 
-        return { records, config: configData };
+        return { records, config: configData, packingChecked };
       },
 
     // 2. 即時同步暫存備貨單
@@ -761,7 +827,18 @@
       await setDoc(tempRef, {
         records: records,
         updatedAt: serverTimestamp()
-      });
+      }, { merge: true });
+      return { status: "SUCCESS" };
+    },
+
+    async updatePackingCheck(itemKey, checked) {
+      const tempRef = doc(db, 'temp_orders', 'current');
+      await setDoc(tempRef, {
+        packingCheckedByDate: {
+          [getLocalDateKey()]: checked ? arrayUnion(itemKey) : arrayRemove(itemKey)
+        },
+        updatedAt: serverTimestamp()
+      }, { merge: true });
       return { status: "SUCCESS" };
     },
 
@@ -950,6 +1027,10 @@ let baseProducts = [];
 let baseShops    = [];
 let shopDatabase = {};
 let records      = [];
+let packingCheckedItems = new Set();
+let packingTogglePending = new Set();
+const PACKING_SELECTED_SHOP_KEY = 'jt-packing-selected-shop';
+let packingSelectedShop = '';
 let syncTimer    = null;
 let currentBarcodesRaw = defaultBarcodes.join('\n');
 let collapsedGroupsByShop = {};
@@ -965,6 +1046,11 @@ try {
     if (Array.isArray(savedHiddenShops)) hiddenSummaryShops = new Set(savedHiddenShops.filter(shop => typeof shop === 'string'));
 } catch (error) {
     console.warn('Unable to load summary shop preferences:', error);
+}
+try {
+    packingSelectedShop = localStorage.getItem(PACKING_SELECTED_SHOP_KEY) || '';
+} catch (error) {
+    console.warn('Unable to load packing shop preference:', error);
 }
 
 /* ════════════════════════════════════════════
@@ -1108,12 +1194,25 @@ document.getElementById('btn-summary-tab').addEventListener('click', function() 
 document.getElementById('btn-delivery-tab').addEventListener('click', function() { switchTab('delivery-tab', this); });
 document.getElementById('btn-history-tab').addEventListener('click', function() { switchTab('history-tab', this); });
 document.getElementById('btn-setting-tab').addEventListener('click', function() { switchTab('setting-tab', this); });
+document.getElementById('summaryStockViewBtn').addEventListener('click', () => switchSummaryView('stock'));
+document.getElementById('summaryPackingViewBtn').addEventListener('click', () => switchSummaryView('packing'));
 document.getElementById('summaryShopSelectAll').addEventListener('click', () => setAllSummaryShopsVisible(true));
 document.getElementById('summaryShopSelectNone').addEventListener('click', () => setAllSummaryShopsVisible(false));
 
 document.getElementById('historyShopMode').addEventListener('change', updateHistoryShopMode);
 document.getElementById('historyProductMode').addEventListener('change', updateHistoryProductMode);
 document.getElementById('historySearchBtn').addEventListener('click', searchHistoryOrders);
+
+function switchSummaryView(view) {
+    const showPacking = view === 'packing';
+    document.getElementById('summaryStockView').hidden = showPacking;
+    document.getElementById('summaryPackingView').hidden = !showPacking;
+    document.getElementById('summaryStockViewBtn').classList.toggle('active', !showPacking);
+    document.getElementById('summaryStockViewBtn').setAttribute('aria-selected', String(!showPacking));
+    document.getElementById('summaryPackingViewBtn').classList.toggle('active', showPacking);
+    document.getElementById('summaryPackingViewBtn').setAttribute('aria-selected', String(showPacking));
+    if (showPacking) renderPackingList();
+}
 
 function saveSummaryShopPreferences() {
     try {
@@ -1580,6 +1679,9 @@ async function loadSystem() {
             shops: defaultShops,
             barcodes: defaultBarcodes
         });
+        packingCheckedItems = new Set(data && Array.isArray(data.packingChecked)
+            ? data.packingChecked.filter(key => typeof key === 'string')
+            : []);
         if (data && data.records) {
             const recordMap = new Map();
             (data.records || []).forEach(r => {
@@ -2100,11 +2202,151 @@ function updateNoteFromGrid(prod, noteValue) {
     updateUI();
 }
 
+function getPackingItemKey(shop, product, color) {
+    return JSON.stringify([shop, product, color]);
+}
+
+function renderPackingList() {
+    const container = document.getElementById('packingList');
+    const shopFilter = document.getElementById('packingShopFilter');
+    if (!container || !shopFilter) return;
+
+    const activeRecords = records.filter(record => Number(record.qty) > 0 || String(record.note || '').trim());
+    if (activeRecords.length === 0) {
+        packingSelectedShop = '';
+        shopFilter.innerHTML = '<div class="empty-text">目前沒有店家備貨資料</div>';
+        container.innerHTML = '<div class="empty-text">目前沒有店家打包資料</div>';
+        return;
+    }
+
+    const shopNamesWithData = new Set(activeRecords.map(record => record.shop).filter(Boolean));
+    const shops = [
+        ...baseShops.filter(shop => shopNamesWithData.has(shop)),
+        ...[...shopNamesWithData].filter(shop => !baseShops.includes(shop))
+    ];
+
+    if (!shops.includes(packingSelectedShop)) {
+        packingSelectedShop = shops[0];
+    }
+
+    shopFilter.innerHTML = shops.map((shop, index) => `<label class="packing-shop-option">
+        <input type="radio" name="packing-shop" id="packing-shop-${index}" value="${escapeHtml(shop)}" ${shop === packingSelectedShop ? 'checked' : ''}>
+        <span>${escapeHtml(shop)}</span>
+    </label>`).join('');
+    shopFilter.querySelectorAll('input[name="packing-shop"]').forEach(input => {
+        input.addEventListener('change', function() {
+            if (!this.checked) return;
+            packingSelectedShop = this.value;
+            try {
+                localStorage.setItem(PACKING_SELECTED_SHOP_KEY, packingSelectedShop);
+            } catch (error) {
+                console.warn('Unable to save packing shop preference:', error);
+            }
+            renderPackingList();
+        });
+    });
+
+    try {
+        localStorage.setItem(PACKING_SELECTED_SHOP_KEY, packingSelectedShop);
+    } catch (error) {
+        console.warn('Unable to save packing shop preference:', error);
+    }
+
+    const shop = packingSelectedShop;
+    const shopRecords = activeRecords.filter(record => record.shop === shop);
+        const products = new Map();
+        shopRecords.forEach(record => {
+            const product = String(record.baseName || record.name || '未命名品項');
+            if (!products.has(product)) products.set(product, { notes: new Set(), quantities: new Map() });
+            const productData = products.get(product);
+            const note = String(record.note || '').trim();
+            if (note) productData.notes.add(note);
+            const quantity = Number(record.qty) || 0;
+            if (quantity > 0) {
+                const color = String(record.color || '');
+                productData.quantities.set(color, (productData.quantities.get(color) || 0) + quantity);
+            }
+        });
+
+        const productNames = [...products.keys()].sort((first, second) => {
+            const firstIndex = baseProducts.indexOf(first);
+            const secondIndex = baseProducts.indexOf(second);
+            if (firstIndex < 0 && secondIndex < 0) return first.localeCompare(second, 'zh-Hant');
+            if (firstIndex < 0) return 1;
+            if (secondIndex < 0) return -1;
+            return firstIndex - secondIndex;
+        });
+
+        const productMarkup = productNames.map(product => {
+            const productData = products.get(product);
+            const notes = [...productData.notes];
+            const noteMarkup = notes.length
+                ? `<div class="packing-note">📝 ${notes.map(escapeHtml).join('<br>')}</div>`
+                : '';
+            const colors = [...productData.quantities.keys()].sort((first, second) => {
+                const firstIndex = COLORS.indexOf(first);
+                const secondIndex = COLORS.indexOf(second);
+                return (firstIndex < 0 ? COLORS.length : firstIndex) - (secondIndex < 0 ? COLORS.length : secondIndex);
+            });
+            const itemMarkup = colors.map(color => {
+                const itemKey = getPackingItemKey(shop, product, color);
+                const checked = packingCheckedItems.has(itemKey);
+                const pending = packingTogglePending.has(itemKey);
+                const colorLabel = COLORS.includes(color) ? `${COLOR_EMOJI[color]} ${color}色` : escapeHtml(color);
+                return `<button type="button" class="packing-item${checked ? ' checked' : ''}" data-packing-key="${escapeHtml(itemKey)}" aria-pressed="${checked}"${pending ? ' disabled' : ''} style="background:${COLOR_BG[color] || '#f8fafc'};">
+                    <span>${checked ? '✅ 已完成 · ' : '☐ 待打包 · '}${colorLabel}</span>
+                    <strong>${productData.quantities.get(color)} 個</strong>
+                </button>`;
+            }).join('');
+            const noteOnly = colors.length === 0 ? '<div style="font-size:12px; color:var(--text-muted);">此品項只有備註，沒有數量</div>' : '';
+            return `<div class="packing-product">
+                <div class="packing-product-title">${escapeHtml(product)}</div>
+                ${noteMarkup}${itemMarkup}${noteOnly}
+            </div>`;
+        }).join('');
+
+    container.innerHTML = `<section class="packing-shop-group">
+            <h2 class="shop-title">🏪 ${escapeHtml(shop)}</h2>
+            ${productMarkup}
+        </section>`;
+
+    container.querySelectorAll('.packing-item').forEach(button => {
+        button.addEventListener('click', () => togglePackingItem(button.dataset.packingKey));
+    });
+}
+
+async function togglePackingItem(itemKey) {
+    if (!itemKey || packingTogglePending.has(itemKey)) return;
+
+    const wasChecked = packingCheckedItems.has(itemKey);
+    const checked = !wasChecked;
+    packingTogglePending.add(itemKey);
+    if (checked) packingCheckedItems.add(itemKey);
+    else packingCheckedItems.delete(itemKey);
+    renderPackingList();
+
+    try {
+        if (!window.__firebaseReady) await window.__firebasePromise;
+        await window.FirebaseBackend.updatePackingCheck(itemKey, checked);
+    } catch (error) {
+        console.error('packing checklist sync error:', error);
+        if (packingCheckedItems.has(itemKey) === checked) {
+            if (wasChecked) packingCheckedItems.add(itemKey);
+            else packingCheckedItems.delete(itemKey);
+        }
+        showToast('❌ 打包狀態雲端同步失敗：' + (error.message || '請檢查網路與 Firestore 權限'), 'error', 6000);
+    } finally {
+        packingTogglePending.delete(itemKey);
+        renderPackingList();
+    }
+}
+
 /* ════════════════════════════════════════════
    UI 更新（明細 + 匯總）
    ════════════════════════════════════════════ */
 function updateUI() {
     renderSummaryShopFilter();
+    renderPackingList();
     const activeRecords = records.filter(r => r.qty > 0 || r.note);
 
     if (activeRecords.length === 0) {
