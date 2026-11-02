@@ -292,7 +292,11 @@
         .packing-shop-filter { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; max-height: 180px; overflow-y: auto; margin-bottom: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc; }
         .packing-shop-option { display: flex; align-items: center; gap: 6px; padding: 7px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; font-size: 12px; cursor: pointer; }
         .packing-shop-option:has(input:checked) { border-color: var(--primary); background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
+        .packing-shop-option.is-complete { border-color: #86efac; background: #f0fdf4; color: #166534; }
+        .packing-shop-option.is-complete:has(input:checked) { border-color: #22c55e; background: #dcfce7; color: #166534; }
         .packing-shop-option input { width: 16px; height: 16px; margin: 0; flex: 0 0 auto; accent-color: var(--primary); }
+        .packing-shop-status { display: inline-flex; align-items: center; flex: 0 0 auto; padding: 2px 6px; border-radius: 999px; background: #dcfce7; color: #15803d; font-size: 10px; font-weight: 700; }
+        .packing-shop-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .packing-shop-group {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
@@ -2225,14 +2229,36 @@ function renderPackingList() {
         ...[...shopNamesWithData].filter(shop => !baseShops.includes(shop))
     ];
 
+    const itemKeysByShop = new Map();
+    activeRecords.forEach(record => {
+        const quantity = Number(record.qty) || 0;
+        if (quantity <= 0 || !record.shop) return;
+        const product = String(record.baseName || record.name || '未命名品項');
+        const color = String(record.color || '');
+        if (!itemKeysByShop.has(record.shop)) itemKeysByShop.set(record.shop, new Set());
+        itemKeysByShop.get(record.shop).add(getPackingItemKey(record.shop, product, color));
+    });
+    const completedShops = new Set(shops.filter(shop => {
+        const itemKeys = itemKeysByShop.get(shop);
+        return itemKeys?.size > 0 && [...itemKeys].every(itemKey => packingCheckedItems.has(itemKey));
+    }));
+    const originalShopOrder = new Map(shops.map((shop, index) => [shop, index]));
+    shops.sort((first, second) =>
+        Number(completedShops.has(first)) - Number(completedShops.has(second))
+        || originalShopOrder.get(first) - originalShopOrder.get(second)
+    );
+
     if (!shops.includes(packingSelectedShop)) {
         packingSelectedShop = shops[0];
     }
 
-    shopFilter.innerHTML = shops.map((shop, index) => `<label class="packing-shop-option">
+    shopFilter.innerHTML = shops.map((shop, index) => {
+        const isComplete = completedShops.has(shop);
+        return `<label class="packing-shop-option${isComplete ? ' is-complete' : ''}">
         <input type="radio" name="packing-shop" id="packing-shop-${index}" value="${escapeHtml(shop)}" ${shop === packingSelectedShop ? 'checked' : ''}>
-        <span>${escapeHtml(shop)}</span>
-    </label>`).join('');
+        <span>${escapeHtml(shop)}</span>${isComplete ? '<span class="packing-shop-status">✅ 已完成</span>' : ''}
+    </label>`;
+    }).join('');
     shopFilter.querySelectorAll('input[name="packing-shop"]').forEach(input => {
         input.addEventListener('change', function() {
             if (!this.checked) return;
@@ -2306,7 +2332,7 @@ function renderPackingList() {
         }).join('');
 
     container.innerHTML = `<section class="packing-shop-group">
-            <h2 class="shop-title">🏪 ${escapeHtml(shop)}</h2>
+            <h2 class="shop-title packing-shop-title"><span>🏪 ${escapeHtml(shop)}</span>${completedShops.has(shop) ? '<span class="packing-shop-status">✅ 全店完成</span>' : ''}</h2>
             ${productMarkup}
         </section>`;
 
