@@ -134,6 +134,7 @@
             margin-bottom: 12px;
             overflow: hidden;
             box-shadow: var(--shadow);
+            scroll-margin-top: 12px;
         }
         .group-header-banner {
             background: #334155;
@@ -157,6 +158,115 @@
             cursor: pointer;
         }
         .group-collapse-toggle:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+        /* ── 系列快速索引 ── */
+        .series-quick-index {
+            position: fixed;
+            z-index: 1100;
+            top: 50%;
+            right: max(10px, env(safe-area-inset-right));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 80vh;
+            height: 80dvh;
+            max-height: calc(100vh - 24px);
+            padding: 10px 6px;
+            border: 1px solid rgba(255,255,255,0.65);
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.214);
+            box-shadow: 0 6px 24px rgba(15, 23, 42, 0.2); /* 透明度0.2 */
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transform: translateY(-50%);
+            transition: width 0.2s ease, background 0.2s ease;
+        }
+        .series-quick-index[hidden] { display: none; }
+        #seriesQuickIndexItems {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-evenly;
+        }
+        .series-quick-index:hover,
+        .series-quick-index:focus-within {
+            width: 32px;
+            background: rgba(15, 23, 42, 0.42);
+        }
+        .series-quick-index-item {
+            position: relative;
+            display: flex;
+            width: 100%;
+            min-height: 0;
+            flex: 1 1 0;
+            align-items: center;
+            justify-content: center;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .series-quick-index-node {
+            display: block;
+            width: 4px;
+            height: 4px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.3);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            transition: background 0.2s ease, transform 0.22s cubic-bezier(0.2, 1.8, 0.4, 1);
+        }
+        .series-quick-index-item:hover .series-quick-index-node,
+        .series-quick-index-item:focus-visible .series-quick-index-node {
+            background: rgba(255,255,255,0.95);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.2), 0 0 14px rgba(255,255,255,0.9);
+            transform: scale(3.2);
+        }
+        .series-quick-index-label {
+            position: absolute;
+            top: 50%;
+            right: calc(100% + 2px);
+            z-index: 1;
+            width: max-content;
+            max-width: min(240px, calc(100vw - 32px));
+            padding: 7px 10px;
+            border: 1px solid rgba(255,255,255,0.72);
+            border-radius: 10px;
+            background: rgba(15, 23, 42, 0.78);
+            box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1.35;
+            text-align: center;
+            white-space: normal;
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: auto;
+            transform: translate(4px, -50%);
+            transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+        }
+        .series-quick-index-label::after {
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            width: 8px;
+            height: 8px;
+            background: inherit;
+            border-top: 1px solid rgba(255,255,255,0.72);
+            border-right: 1px solid rgba(255,255,255,0.72);
+            content: "";
+            transform: translate(-50%, -50%) rotate(45deg);
+        }
+        .series-quick-index-item:hover .series-quick-index-label,
+        .series-quick-index-item:focus-visible .series-quick-index-label {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(0, -50%);
+        }
+        .series-quick-index-item:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
         .matrix-table { width: 100%; border-collapse: collapse; text-align: center; table-layout: fixed; }
         .matrix-table th, .matrix-table td { border-bottom: 1px solid #e2e8f0; padding: 6px 3px; vertical-align: middle; }
@@ -589,6 +699,9 @@
         </div>
 
         <div id="matrixCoreContainer"></div>
+        <nav id="seriesQuickIndex" class="series-quick-index" aria-label="商品系列快速索引" hidden>
+            <div id="seriesQuickIndexItems" role="toolbar" aria-label="跳轉至商品系列"></div>
+        </nav>
 
         <div class="card">
             <h2>📝 當前已暫存抄貨明細</h2>
@@ -1840,6 +1953,46 @@ function updateShopInfoPanel() {
     el.innerHTML = `🏷️ <b>條碼規範：</b>${escapeHtml(barcode)}${shopRule ? `<br>📝 <b>店家規範：</b>${escapeHtml(shopRule).replace(/\n/g, '<br>')}` : ''}`;
 }
 
+function renderSeriesQuickIndex() {
+    const index = document.getElementById('seriesQuickIndex');
+    const items = document.getElementById('seriesQuickIndexItems');
+    const groupContainers = Array.from(document.querySelectorAll('#matrixCoreContainer .group-container'));
+    items.replaceChildren();
+
+    if (!shopSelect.value || groupContainers.length === 0) {
+        index.hidden = true;
+        return;
+    }
+
+    groupContainers.forEach(groupContainer => {
+        const groupName = groupContainer.dataset.group;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'series-quick-index-item';
+        button.setAttribute('aria-label', `跳轉至${groupName}`);
+        button.title = groupName;
+
+        const node = document.createElement('span');
+        node.className = 'series-quick-index-node';
+        node.setAttribute('aria-hidden', 'true');
+
+        const label = document.createElement('span');
+        label.className = 'series-quick-index-label';
+        label.textContent = groupName;
+        label.addEventListener('mouseenter', () => {
+            groupContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
+        button.addEventListener('click', () => {
+            groupContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        button.append(node, label);
+        items.appendChild(button);
+    });
+
+    index.hidden = false;
+}
+
 /* ════════════════════════════════════════════
    矩陣表格渲染
    ════════════════════════════════════════════ */
@@ -1850,6 +2003,7 @@ function renderMatrixTable() {
     if (!shopName) {
         container.innerHTML = `<div class="card" style="text-align:center; padding:40px 0; color:#94a3b8; font-weight:700;">
             💡 請先選擇上方店家名稱，系統將自動展開抄貨網格面板</div>`;
+        document.getElementById('seriesQuickIndex').hidden = true;
         return;
     }
 
@@ -1873,7 +2027,7 @@ function renderMatrixTable() {
         const gEsc = gName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 
         // --- 區塊 1：取代原本的 group-header-banner ---
-        html += `<div class="group-container">
+        html += `<div class="group-container" data-group="${escapeHtml(gName)}">
                 <div class="group-header-banner">
                 <button type="button" class="group-collapse-toggle" aria-expanded="${isExpanded}" aria-label="${isExpanded ? '收合' : '展開'}群組 ${gName}">
                     📂 ${gName} <span aria-hidden="true">${isExpanded ? '▾' : '▸'}</span>
@@ -1950,6 +2104,7 @@ function renderMatrixTable() {
     });
 
     container.innerHTML = html;
+    renderSeriesQuickIndex();
 
     // --- 區塊 2：新增事件綁定（請接在 container.innerHTML = html; 之後） ---
 
