@@ -200,6 +200,10 @@
                 background: rgba(15, 23, 42, 0.42);
             }
         }
+        .series-quick-index.is-touch-active {
+            width: 50px;
+            background: rgba(15, 23, 42, 0.42);
+        }
         .series-quick-index-item {
             position: relative;
             display: flex;
@@ -2030,6 +2034,7 @@ function renderSeriesQuickIndex() {
     };
 
     let activeItemResetTimer = 0;
+    let touchExpansionResetTimer = 0;
     index.onpointerdown = event => {
         if (event.pointerType !== 'touch') return;
         const button = event.target.closest('.series-quick-index-item');
@@ -2037,6 +2042,8 @@ function renderSeriesQuickIndex() {
 
         touchSwipeMoved = false;
         suppressClickAfterSwipe = false;
+        if (touchExpansionResetTimer) window.clearTimeout(touchExpansionResetTimer);
+        index.classList.add('is-touch-active');
         index.dataset.touchPointer = String(event.pointerId);
         if (typeof index.setPointerCapture === 'function') index.setPointerCapture(event.pointerId);
         activateItem(button, false);
@@ -2064,7 +2071,10 @@ function renderSeriesQuickIndex() {
         const activeItem = items.querySelector('.series-quick-index-item.is-active');
         activeItemResetTimer = window.setTimeout(() => {
             activeItem?.classList.remove('is-active');
-        }, 500);
+        }, 300);
+        touchExpansionResetTimer = window.setTimeout(() => {
+            index.classList.remove('is-touch-active');
+        }, 300);
     };
 
     index.hidden = false;
