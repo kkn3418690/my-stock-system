@@ -194,10 +194,6 @@
             align-items: center;
             justify-content: space-evenly;
         }
-        .series-quick-index:focus-within {
-            width: 40px;
-            background: rgba(15, 23, 42, 0.42);
-        }
         @media (hover: hover) {
             .series-quick-index:hover {
                 width: 50px;
@@ -1979,6 +1975,8 @@ function renderSeriesQuickIndex() {
     const index = document.getElementById('seriesQuickIndex');
     const items = document.getElementById('seriesQuickIndexItems');
     const groupContainers = Array.from(document.querySelectorAll('#matrixCoreContainer .group-container'));
+    let touchSwipeMoved = false;
+    let suppressClickAfterSwipe = false;
     items.replaceChildren();
 
     if (!shopSelect.value || groupContainers.length === 0) {
@@ -2002,18 +2000,25 @@ function renderSeriesQuickIndex() {
         const label = document.createElement('span');
         label.className = 'series-quick-index-label';
         label.textContent = groupName;
-        label.addEventListener('mouseenter', () => {
-            groupContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        label.addEventListener('pointerenter', event => {
+            if (event.pointerType !== 'touch') {
+                groupContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         });
 
-        button.addEventListener('click', () => {
+        button.addEventListener('click', event => {
+            if (suppressClickAfterSwipe) {
+                suppressClickAfterSwipe = false;
+                event.preventDefault();
+                return;
+            }
             groupContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
         button.append(node, label);
         items.appendChild(button);
     });
 
-    const activateItem = (button, shouldNavigate) => {
+    const activateItem = (button, shouldNavigate, behavior = 'smooth') => {
         items.querySelectorAll('.series-quick-index-item.is-active').forEach(activeItem => {
             if (activeItem !== button) activeItem.classList.remove('is-active');
         });
@@ -2021,7 +2026,7 @@ function renderSeriesQuickIndex() {
         if (!shouldNavigate) return;
 
         const groupContainer = groupContainers.find(group => group.dataset.group === button.dataset.group);
-        if (groupContainer) groupContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (groupContainer) groupContainer.scrollIntoView({ behavior, block: 'start' });
     };
 
     let activeItemResetTimer = 0;
@@ -2030,6 +2035,8 @@ function renderSeriesQuickIndex() {
         const button = event.target.closest('.series-quick-index-item');
         if (!button) return;
 
+        touchSwipeMoved = false;
+        suppressClickAfterSwipe = false;
         index.dataset.touchPointer = String(event.pointerId);
         if (typeof index.setPointerCapture === 'function') index.setPointerCapture(event.pointerId);
         activateItem(button, false);
@@ -2039,12 +2046,20 @@ function renderSeriesQuickIndex() {
         const element = document.elementFromPoint(event.clientX, event.clientY);
         const button = element?.closest('.series-quick-index-item');
         if (button && items.contains(button) && !button.classList.contains('is-active')) {
-            activateItem(button, true);
+            touchSwipeMoved = true;
+            activateItem(button, true, 'auto');
         }
     };
     index.onpointerup = index.onpointercancel = event => {
         if (index.dataset.touchPointer !== String(event.pointerId)) return;
         delete index.dataset.touchPointer;
+        if (touchSwipeMoved) {
+            suppressClickAfterSwipe = true;
+            window.setTimeout(() => {
+                suppressClickAfterSwipe = false;
+            }, 0);
+        }
+        touchSwipeMoved = false;
         if (activeItemResetTimer) window.clearTimeout(activeItemResetTimer);
         const activeItem = items.querySelector('.series-quick-index-item.is-active');
         activeItemResetTimer = window.setTimeout(() => {
