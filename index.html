@@ -441,6 +441,7 @@
         }
         .packing-shop-group > .shop-title { grid-column: 1 / -1; margin: 0; }
         .packing-product { min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+        .packing-product.is-final-packing { border-color: #fde68a; background: #fffbeb; }
         .packing-product-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
         .packing-product-title { min-width: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
         .packing-product-total { flex: 0 0 auto; color: var(--text-muted); font-size: 12px; font-weight: 700; white-space: nowrap; }
@@ -2568,14 +2569,14 @@ function renderPackingList() {
             }
         });
 
-        const productNames = [...products.keys()].sort((first, second) => {
-            const firstIndex = baseProducts.indexOf(first);
-            const secondIndex = baseProducts.indexOf(second);
-            if (firstIndex < 0 && secondIndex < 0) return first.localeCompare(second, 'zh-Hant');
-            if (firstIndex < 0) return 1;
-            if (secondIndex < 0) return -1;
-            return firstIndex - secondIndex;
-        });
+        const productNames = sortPackingProductNames([...products.keys()]);
+        const remainingProductNames = new Set(productNames.filter(product => {
+            const productData = products.get(product);
+            return [...productData.quantities.keys()].some(color =>
+                !packingCheckedItems.has(getPackingItemKey(shop, product, color))
+            );
+        }));
+        const highlightRemainingProducts = remainingProductNames.size > 0 && remainingProductNames.size <= 5;
 
         const productMarkup = productNames.map(product => {
             const productData = products.get(product);
@@ -2600,7 +2601,8 @@ function renderPackingList() {
             }).join('');
             const totalQuantity = [...productData.quantities.values()].reduce((total, quantity) => total + quantity, 0);
             const noteOnly = colors.length === 0 ? '<div style="font-size:12px; color:var(--text-muted);">此品項只有備註，沒有數量</div>' : '';
-            return `<div class="packing-product">
+            const isHighlighted = highlightRemainingProducts && remainingProductNames.has(product);
+            return `<div class="packing-product${isHighlighted ? ' is-final-packing' : ''}">
                 <div class="packing-product-heading">
                     <div class="packing-product-title">${escapeHtml(product)}</div>
                     <span class="packing-product-total">總數：${totalQuantity} 個</span>
@@ -2616,6 +2618,26 @@ function renderPackingList() {
 
     container.querySelectorAll('.packing-item').forEach(button => {
         button.addEventListener('click', () => togglePackingItem(button.dataset.packingKey));
+    });
+}
+
+function sortPackingProductNames(productNames) {
+    const priorityProducts = ['2尺L片', '3尺L片'];
+    return productNames.sort((first, second) => {
+        const firstPriority = priorityProducts.indexOf(first);
+        const secondPriority = priorityProducts.indexOf(second);
+        if (firstPriority !== -1 || secondPriority !== -1) {
+            if (firstPriority === -1) return 1;
+            if (secondPriority === -1) return -1;
+            return firstPriority - secondPriority;
+        }
+
+        const firstIndex = baseProducts.indexOf(first);
+        const secondIndex = baseProducts.indexOf(second);
+        if (firstIndex < 0 && secondIndex < 0) return first.localeCompare(second, 'zh-Hant');
+        if (firstIndex < 0) return 1;
+        if (secondIndex < 0) return -1;
+        return firstIndex - secondIndex;
     });
 }
 
