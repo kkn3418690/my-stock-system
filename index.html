@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰智慧備貨與備貨系統 v3.1.3</title>
+    <title>竣泰智慧備貨與備貨系統 v3.1.4</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -175,12 +175,15 @@
             padding: 10px 6px;
             border: 1px solid rgba(255,255,255,0.65);
             border-radius: 999px;
-            background: rgba(15, 23, 42, 0.214);
+            background: rgba(15, 23, 42, 0.2);
             box-shadow: 0 6px 24px rgba(15, 23, 42, 0.2); /* 透明度0.2 */
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             transform: translateY(-50%);
             transition: width 0.2s ease, background 0.2s ease;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
         }
         .series-quick-index[hidden] { display: none; }
         #seriesQuickIndexItems {
@@ -191,10 +194,15 @@
             align-items: center;
             justify-content: space-evenly;
         }
-        .series-quick-index:hover,
         .series-quick-index:focus-within {
             width: 32px;
             background: rgba(15, 23, 42, 0.42);
+        }
+        @media (hover: hover) {
+            .series-quick-index:hover {
+                width: 32px;
+                background: rgba(15, 23, 42, 0.42);
+            }
         }
         .series-quick-index-item {
             position: relative;
@@ -218,11 +226,18 @@
             box-shadow: 0 1px 4px rgba(0,0,0,0.2);
             transition: background 0.2s ease, transform 0.22s cubic-bezier(0.2, 1.8, 0.4, 1);
         }
-        .series-quick-index-item:hover .series-quick-index-node,
-        .series-quick-index-item:focus-visible .series-quick-index-node {
+        .series-quick-index-item:focus-visible .series-quick-index-node,
+        .series-quick-index-item.is-active .series-quick-index-node {
             background: rgba(255,255,255,0.95);
             box-shadow: 0 0 0 3px rgba(255,255,255,0.2), 0 0 14px rgba(255,255,255,0.9);
             transform: scale(3.2);
+        }
+        @media (hover: hover) {
+            .series-quick-index-item:hover .series-quick-index-node {
+                background: rgba(255,255,255,0.95);
+                box-shadow: 0 0 0 3px rgba(255,255,255,0.2), 0 0 14px rgba(255,255,255,0.9);
+                transform: scale(3.2);
+            }
         }
         .series-quick-index-label {
             position: absolute;
@@ -260,11 +275,18 @@
             content: "";
             transform: translate(-50%, -50%) rotate(45deg);
         }
-        .series-quick-index-item:hover .series-quick-index-label,
-        .series-quick-index-item:focus-visible .series-quick-index-label {
+        .series-quick-index-item:focus-visible .series-quick-index-label,
+        .series-quick-index-item.is-active .series-quick-index-label {
             opacity: 1;
             visibility: visible;
             transform: translate(0, -50%);
+        }
+        @media (hover: hover) {
+            .series-quick-index-item:hover .series-quick-index-label {
+                opacity: 1;
+                visibility: visible;
+                transform: translate(0, -50%);
+            }
         }
         .series-quick-index-item:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 
@@ -1969,6 +1991,7 @@ function renderSeriesQuickIndex() {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'series-quick-index-item';
+        button.dataset.group = groupName;
         button.setAttribute('aria-label', `跳轉至${groupName}`);
         button.title = groupName;
 
@@ -1989,6 +2012,45 @@ function renderSeriesQuickIndex() {
         button.append(node, label);
         items.appendChild(button);
     });
+
+    const activateItem = (button, shouldNavigate) => {
+        items.querySelectorAll('.series-quick-index-item.is-active').forEach(activeItem => {
+            if (activeItem !== button) activeItem.classList.remove('is-active');
+        });
+        button.classList.add('is-active');
+        if (!shouldNavigate) return;
+
+        const groupContainer = groupContainers.find(group => group.dataset.group === button.dataset.group);
+        if (groupContainer) groupContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    let activeItemResetTimer = 0;
+    index.onpointerdown = event => {
+        if (event.pointerType !== 'touch') return;
+        const button = event.target.closest('.series-quick-index-item');
+        if (!button) return;
+
+        index.dataset.touchPointer = String(event.pointerId);
+        if (typeof index.setPointerCapture === 'function') index.setPointerCapture(event.pointerId);
+        activateItem(button, false);
+    };
+    index.onpointermove = event => {
+        if (event.pointerType !== 'touch' || index.dataset.touchPointer !== String(event.pointerId)) return;
+        const element = document.elementFromPoint(event.clientX, event.clientY);
+        const button = element?.closest('.series-quick-index-item');
+        if (button && items.contains(button) && !button.classList.contains('is-active')) {
+            activateItem(button, true);
+        }
+    };
+    index.onpointerup = index.onpointercancel = event => {
+        if (index.dataset.touchPointer !== String(event.pointerId)) return;
+        delete index.dataset.touchPointer;
+        if (activeItemResetTimer) window.clearTimeout(activeItemResetTimer);
+        const activeItem = items.querySelector('.series-quick-index-item.is-active');
+        activeItemResetTimer = window.setTimeout(() => {
+            activeItem?.classList.remove('is-active');
+        }, 500);
+    };
 
     index.hidden = false;
 }
