@@ -483,6 +483,39 @@
             border: 1px dashed var(--border);
         }
         .shop-title { font-weight: 700; color: #334155; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px; font-size: 13px; }
+        .history-shop-title {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-top: 6px;
+            background: #f8fafc;
+        }
+        .history-shop-delete {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            min-height: 40px;
+            flex: 0 0 auto;
+            padding: 9px 14px;
+            border: 0;
+            border-radius: 7px;
+            background: #dc2626;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .history-shop-delete:hover { background: #b91c1c; }
+        .history-shop-delete:active { transform: scale(0.97); }
+        .history-shop-delete:focus-visible { outline: 2px solid #dc2626; outline-offset: 2px; }
 
         .history-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
         .history-filters label { font-size: 12px; }
@@ -537,8 +570,6 @@
             min-height: 48px;
         }
         .btn:active { transform: scale(0.98); }
-        .btn-success { background: var(--success); color: white; margin-bottom: 10px; box-shadow: 0 4px 10px rgba(34,197,94,0.25); }
-        .btn-success:hover { background: #16a34a; }
         .btn-danger { background: #fef2f2; color: var(--danger); font-size: 13px; padding: 8px; border: 1px dashed var(--danger); min-height: 40px; }
         .btn-danger:hover { background: #fee2e2; }
         .btn-info { background: var(--info); color: white; box-shadow: 0 4px 10px rgba(0,122,255,0.2); }
@@ -731,7 +762,6 @@
                 <div class="empty-text">尚無任何輸入數據</div>
             </div>
             <hr style="margin: 10px 0; border: 0; border-top: 1px solid #e2e8f0;">
-            <button type="button" class="btn btn-success" id="exportBtn">🟢 儲存並導出當日補貨單 (CSV)</button>
             <button type="button" class="btn btn-danger" id="clearBtn">🗑️ 清空今日數據（新工作日再點）</button>
         </div>
     </div>
@@ -2704,53 +2734,37 @@ function updateUI() {
                 </div>`;
             }
         });
-        if (inner) histHtml += `<div class="shop-group"><div class="shop-title">🏪 ${shop}</div>${inner}</div>`;
+        if (inner) histHtml += `<div class="shop-group">
+            <div class="shop-title history-shop-title">
+                <span>🏪 ${escapeHtml(shop)}</span>
+                <button type="button" class="history-shop-delete" data-shop="${escapeHtml(shop)}" aria-label="刪除 ${escapeHtml(shop)} 的暫存資料" title="刪除此店家暫存資料">✖ 刪除</button>
+            </div>
+            ${inner}
+        </div>`;
     }
     historyList.innerHTML = histHtml || '<div class="empty-text">尚無任何輸入數據</div>';
+    historyList.querySelectorAll('.history-shop-delete').forEach(button => {
+        button.addEventListener('click', () => deleteShopRecords(button.dataset.shop));
+    });
 }
 
-/* ════════════════════════════════════════════
-   匯出 CSV
-   ════════════════════════════════════════════ */
-document.getElementById('exportBtn').addEventListener('click', () => {
-    const activeRec = records.filter(r => r.qty > 0 || r.note);
-    if (activeRec.length === 0) { showToast('當前無任何抄貨暫存數據！', 'warning'); return; }
+async function deleteShopRecords(shopName) {
+    const shopRecordCount = records.filter(record => record.shop === shopName).length;
+    if (shopRecordCount === 0) return;
 
-    const shopList = [...new Set(activeRec.map(r => r.shop))];
-    let csv = '\uFEFF';   // 單一 BOM，修正原版重複 BOM bug
+    const confirmed = await showConfirm(
+        '⚠️ 確認刪除店家資料',
+        `確定刪除「${escapeHtml(shopName)}」的 ${shopRecordCount} 筆暫存抄貨資料嗎？<br>已存入歷史訂單的資料不會刪除。`,
+        { danger: true, confirmLabel: '刪除' }
+    );
+    if (!confirmed) return;
 
-    shopList.forEach(shop => {
-        const shopRecs = records.filter(r => r.shop === shop);
-        const prods = [...new Set(shopRecs.map(r => r.baseName))]
-            .sort((a, b) => baseProducts.indexOf(a) - baseProducts.indexOf(b));
-        csv += `🏪 店家：${shop}\n品名,${COLORS.join(',')},備註\n`;
-
-        prods.forEach(prod => {
-            const row = [prod];
-            let hasQty = false;
-            COLORS.forEach(c => {
-                const total = shopRecs.filter(r => r.baseName === prod && r.color === c).reduce((s, r) => s + r.qty, 0);
-                if (total > 0) hasQty = true;
-                row.push(total > 0 ? total : '');
-            });
-            const notes = [...new Set(shopRecs.filter(r => r.baseName === prod && r.note).map(r => r.note))].join('；').replace(/,/g, '，');
-            row.push(notes);
-            if (hasQty || notes) csv += row.join(',') + '\n';
-        });
-        csv += '\n\n';
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    a.href = url;
-    a.download = `補貨總表_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('✅ CSV 補貨單已下載！', 'success', 2000);
-});
+    records = records.filter(record => record.shop !== shopName);
+    saveAll();
+    renderMatrixTable();
+    updateUI();
+    showToast(`✅ 已刪除「${escapeHtml(shopName)}」的暫存抄貨資料`, 'success');
+}
 
 /* ── 複製文字 ── */
 document.getElementById('copyBtn').addEventListener('click', () => {
