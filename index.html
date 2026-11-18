@@ -2074,7 +2074,7 @@ function renderSeriesQuickIndex() {
         }, 300);
         touchExpansionResetTimer = window.setTimeout(() => {
             index.classList.remove('is-touch-active');
-        }, 300);
+        }, 300); // 延遲移除 touch-active 樣式，避免手指滑動時閃爍 300ms
     };
 
     index.hidden = false;
