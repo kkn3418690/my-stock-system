@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰智慧備貨與備貨系統 v3.1.4</title>
+    <title>竣泰智慧備貨與備貨系統 v3.1.5</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -98,6 +98,59 @@
         }
 
         label { display: block; margin-bottom: 4px; font-weight: 700; color: #334155; font-size: 14px; }
+        .ui-switch-setting {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 44px;
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+        .ui-switch-input {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            margin: -1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+        .ui-switch-track {
+            position: relative;
+            display: inline-flex;
+            width: 64px;
+            height: 36px;
+            flex: 0 0 64px;
+            align-items: center;
+            border: 1px solid #94a3b8;
+            border-radius: 999px;
+            background: #cbd5e1;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+        .ui-switch-track::before {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.28);
+            content: "";
+            transition: transform 0.2s ease;
+        }
+        .ui-switch-input:checked + .ui-switch-track {
+            border-color: var(--primary);
+            background: var(--primary);
+        }
+        .ui-switch-input:checked + .ui-switch-track::before { transform: translateX(28px); }
+        .ui-switch-input:focus-visible + .ui-switch-track {
+            outline: 3px solid var(--primary-light);
+            outline-offset: 3px;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .ui-switch-track, .ui-switch-track::before { transition: none; }
+        }
         select, input[type="text"], input[type="number"], textarea {
             width: 100%;
             padding: 10px;
@@ -795,7 +848,7 @@
         <section id="summaryPackingView" class="summary-view" role="tabpanel" aria-labelledby="summaryPackingViewBtn" hidden>
             <div class="card">
                 <h1>📋 理貨打包清單</h1>
-                <p style="margin-bottom:10px; color:var(--text-muted); font-size:12px;">點擊商品可標記完成，再點一次即可取消；完成狀態會同步至 Firebase，並依今天的日期分開記錄。</p>
+                <p style="margin-bottom:10px; color:var(--text-muted); font-size:12px;">點擊商品可標記完成，再點一次即可取消；完成狀態會同步至 Firebase，隔天仍可接續未完成項目。</p>
                 <div style="margin-bottom: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: #f8fafc;">
                     <div style="margin-bottom: 8px; font-size: 13px; font-weight: 700;">🏪 選擇要打包的店家</div>
                     <div id="packingShopFilter" class="packing-shop-filter"></div>
@@ -866,21 +919,30 @@
     <div id="setting-tab" class="tab-content">
         <h1>⚙️ 系統後台原始資料維護</h1>
         <div class="card">
-            <h2>📦 1. 編輯商品品項清單（一行一個商品）</h2>
+            <h2>🎨 1. UI 設定</h2>
+            <label class="ui-switch-setting">
+                <input type="checkbox" id="seriesQuickIndexEnabled" class="ui-switch-input" role="switch" checked>
+                <span class="ui-switch-track" aria-hidden="true"></span>
+                <span>啟用商品系列快速索引</span>
+            </label>
+            <p style="font-size:12px; color:var(--text-muted); margin-top:8px; margin-bottom:0;">設定完成後，請按下頁面下方的「儲存並安全同步配置」。</p>
+        </div>
+        <div class="card">
+            <h2>📦 2. 編輯商品品項清單（一行一個商品）</h2>
             <textarea id="productsTextarea" rows="6"></textarea>
             <p style="font-size:11px; color:var(--text-muted); margin-top:-4px; margin-bottom:0;">* 變更品項後系統會自動重新分配商品群組。</p>
         </div>
         <div class="card">
-            <h2>🏪 2. 編輯店家清單（一行一個店家）</h2>
+            <h2>🏪 3. 編輯店家清單（一行一個店家）</h2>
             <textarea id="shopsTextarea" rows="4"></textarea>
         </div>
         <div class="card">
-            <h2>🏷️ 3. 編輯店家條碼規範</h2>
+            <h2>🏷️ 4. 編輯店家條碼規範</h2>
             <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">（系統會自動讀取上方店家清單，請為各店家選擇對應的條碼規範）</p>
             <div id="barcodeRulesContainer" style="max-height: 280px; overflow-y: auto; border: 2px solid var(--border); border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;"></div>
         </div>
         <div class="card">
-            <h2>📝 4. 店家規範</h2>
+            <h2>📝 5. 店家規範</h2>
             <p style="font-size:12px; color:var(--text-muted); margin-bottom:8px;">（輸入各店家的特別提醒，會顯示在智慧抄貨頁的黃色資訊框）</p>
             <div id="shopRulesContainer" style="max-height: 280px; overflow-y: auto; border: 2px solid var(--border); border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;"></div>
             <button type="button" class="btn btn-info" id="saveSettingsBtn" style="margin-top: 5px;">💾 儲存並安全同步配置</button>
@@ -955,6 +1017,11 @@
       return `${y}-${m}-${d}`;
     }
 
+    function getRecordDateKey(record, fallbackDateKey) {
+      const createdDateKey = String(record.createdDateKey || '');
+      return /^\d{4}-\d{2}-\d{2}$/.test(createdDateKey) ? createdDateKey : fallbackDateKey;
+    }
+
     window.FirebaseBackend = {
       app,
       analytics,
@@ -977,6 +1044,7 @@
             shops: defaults.shops.join('\n'),
             barcodes: defaults.barcodes.join('\n'),
             database: { default: 5 },
+            uiSettings: { seriesQuickIndexEnabled: true },
             updatedAt: serverTimestamp()
           };
           await setDoc(configRef, configData);
@@ -988,7 +1056,21 @@
         const tempData = tempSnap.exists() ? tempSnap.data() : {};
         let records = [];
         records = tempData.records || [];
-        const packingChecked = tempData.packingCheckedByDate?.[getLocalDateKey()] || [];
+        const legacyPackingChecks = tempData.packingCheckedByDate || {};
+        const legacyDates = Object.keys(legacyPackingChecks).sort();
+        const latestLegacyDate = legacyDates.slice().reverse()
+          .find(date => Array.isArray(legacyPackingChecks[date]));
+        const packingChecked = Array.isArray(tempData.packingChecked)
+          ? tempData.packingChecked.filter(key => typeof key === 'string')
+          : (latestLegacyDate
+            ? legacyPackingChecks[latestLegacyDate].filter(key => typeof key === 'string')
+            : []);
+        if (!Array.isArray(tempData.packingChecked) && latestLegacyDate) {
+          await setDoc(tempRef, {
+            packingChecked,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        }
 
         return { records, config: configData, packingChecked };
       },
@@ -1006,9 +1088,7 @@
     async updatePackingCheck(itemKey, checked) {
       const tempRef = doc(db, 'temp_orders', 'current');
       await setDoc(tempRef, {
-        packingCheckedByDate: {
-          [getLocalDateKey()]: checked ? arrayUnion(itemKey) : arrayRemove(itemKey)
-        },
+        packingChecked: checked ? arrayUnion(itemKey) : arrayRemove(itemKey),
         updatedAt: serverTimestamp()
       }, { merge: true });
       return { status: "SUCCESS" };
@@ -1029,15 +1109,16 @@
         });
       }
 
-      const dateKey = getLocalDateKey();
-      const dateStr = dateKey.replace(/-/g, '/');
+      const saveDateKey = getLocalDateKey();
 
       const chunkSize = 400;
       for (let i = 0; i < validRecords.length; i += chunkSize) {
         const chunk = validRecords.slice(i, i + chunkSize);
         const batch = writeBatch(db);
         chunk.forEach(r => {
-          const docId = `${dateKey}_${r.id || Date.now() + '_' + Math.random().toString(36).substr(2, 5)}`;
+          const dateKey = getRecordDateKey(r, saveDateKey);
+          const dateStr = dateKey.replace(/-/g, '/');
+          const docId = `${saveDateKey}_${r.id || Date.now() + '_' + Math.random().toString(36).substr(2, 5)}`;
           const docRef = doc(db, 'history_orders', docId);
           batch.set(docRef, {
             dateKey: dateKey,
@@ -1067,6 +1148,7 @@
         shops: config.shops,
         barcodes: config.barcodes,
         database: config.database,
+        uiSettings: config.uiSettings,
         updatedAt: serverTimestamp()
       });
       return { status: "SUCCESS" };
@@ -1201,6 +1283,7 @@ let shopDatabase = {};
 let records      = [];
 let packingCheckedItems = new Set();
 let packingTogglePending = new Set();
+let seriesQuickIndexEnabled = true;
 const PACKING_SELECTED_SHOP_KEY = 'jt-packing-selected-shop';
 let packingSelectedShop = '';
 let syncTimer    = null;
@@ -1368,6 +1451,10 @@ document.getElementById('btn-history-tab').addEventListener('click', function() 
 document.getElementById('btn-setting-tab').addEventListener('click', function() { switchTab('setting-tab', this); });
 document.getElementById('summaryStockViewBtn').addEventListener('click', () => switchSummaryView('stock'));
 document.getElementById('summaryPackingViewBtn').addEventListener('click', () => switchSummaryView('packing'));
+document.getElementById('seriesQuickIndexEnabled').addEventListener('change', function() {
+    seriesQuickIndexEnabled = this.checked;
+    renderSeriesQuickIndex();
+});
 document.getElementById('summaryShopSelectAll').addEventListener('click', () => setAllSummaryShopsVisible(true));
 document.getElementById('summaryShopSelectNone').addEventListener('click', () => setAllSummaryShopsVisible(false));
 
@@ -1772,7 +1859,8 @@ function buildPayload(action) {
             products: productsTextarea.value,
             shops:    shopsTextarea.value,
             barcodes: finalBarcodes,
-            database: shopDatabase
+            database: shopDatabase,
+            uiSettings: { seriesQuickIndexEnabled }
         }
     };
 }
@@ -1786,7 +1874,8 @@ async function saveSettingsToCloud(successMessage) {
             products: productsTextarea.value,
             shops: shopsTextarea.value,
             barcodes: currentBarcodesRaw,
-            database: shopDatabase
+            database: shopDatabase,
+            uiSettings: { seriesQuickIndexEnabled }
         });
     });
     settingsSaveQueue = savePromise.then(() => undefined, () => undefined);
@@ -1823,10 +1912,33 @@ document.getElementById('manualSyncBtn').addEventListener('click', async functio
         showToast('⚠️ 目前沒有任何抄貨數據，無法存檔！', 'warning');
         return;
     }
-    this.disabled = true;
+    if (this.disabled) return;
     const orig = this.innerHTML;
-    this.innerHTML = '⏳ 儲存中...';
+    this.disabled = true;
+    this.innerHTML = '⏳ 確認理貨狀態...';
     try {
+        const confirmed = await showConfirm(
+            '📋 確認理貨打包清單',
+            '請確認理貨打包清單是否都已完成。若仍有未完成項目，確認後會帶您前往第一間未完成的店家，完成全部項目後才能存檔。',
+            { confirmLabel: '確認並繼續' }
+        );
+        if (!confirmed) return;
+
+        const { unfinishedShops } = getPackingChecklistState();
+        if (unfinishedShops.length > 0) {
+            packingSelectedShop = unfinishedShops[0];
+            switchTab('summary-tab', document.getElementById('btn-summary-tab'));
+            switchSummaryView('packing');
+            renderPackingList();
+            showToast(`⚠️ 理貨尚未完成，已跳轉至「${escapeHtml(packingSelectedShop)}」；全部完成後才能存檔。`, 'warning', 5000);
+            return;
+        }
+        if (packingTogglePending.size > 0) {
+            showToast('⏳ 理貨狀態仍在同步，請稍後再存檔。', 'warning');
+            return;
+        }
+
+        this.innerHTML = '⏳ 儲存中...';
         if (!window.__firebaseReady) await window.__firebasePromise;
         const res = await window.FirebaseBackend.writeToHistoryZone(records, buildPayload('saveHistory').config);
         showToast('✅ ' + (res.message || '今日抄貨已成功儲存至 Firebase！'), 'success');
@@ -1851,6 +1963,8 @@ async function loadSystem() {
             shops: defaultShops,
             barcodes: defaultBarcodes
         });
+        seriesQuickIndexEnabled = data.config?.uiSettings?.seriesQuickIndexEnabled !== false;
+        document.getElementById('seriesQuickIndexEnabled').checked = seriesQuickIndexEnabled;
         packingCheckedItems = new Set(data && Array.isArray(data.packingChecked)
             ? data.packingChecked.filter(key => typeof key === 'string')
             : []);
@@ -1868,6 +1982,8 @@ async function loadSystem() {
         } else {
             productsTextarea.value = defaultProducts.join('\n');
             shopsTextarea.value    = defaultShops.join('\n');
+            seriesQuickIndexEnabled = true;
+            document.getElementById('seriesQuickIndexEnabled').checked = true;
             currentBarcodesRaw     = defaultBarcodes.join('\n');
         }
         baseProducts = productsTextarea.value.split('\n').map(p => p.trim()).filter(Boolean);
@@ -2014,7 +2130,7 @@ function renderSeriesQuickIndex() {
     let suppressClickAfterSwipe = false;
     items.replaceChildren();
 
-    if (!shopSelect.value || groupContainers.length === 0) {
+    if (!seriesQuickIndexEnabled || !shopSelect.value || groupContainers.length === 0) {
         index.hidden = true;
         return;
     }
@@ -2427,11 +2543,33 @@ async function bulkEditGroupLimit(groupName, color) {
 }
 
 // 修改 updateQtyFromGrid 內的 ID 生成部分
+function getTaipeiDateKey(date = new Date()) {
+    const dateParts = {};
+    new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Taipei',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).formatToParts(date).forEach(part => {
+        dateParts[part.type] = part.value;
+    });
+    return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+}
+
+function getRecordCreatedDateKey(record) {
+    const createdDateKey = String(record?.createdDateKey || '');
+    return /^\d{4}-\d{2}-\d{2}$/.test(createdDateKey) ? createdDateKey : '';
+}
+
 function updateQtyFromGrid(prod, color, value) {
     const shopName = shopSelect.value;
     if (!shopName) return;
     const qty = parseInt(value, 10);
+    const existingRecord = records.find(r => r.shop === shopName && r.baseName === prod && r.color === color);
     const existingNote = getSavedNoteValue(shopName, prod);
+    const createdDateKey = existingRecord
+        ? getRecordCreatedDateKey(existingRecord)
+        : getTaipeiDateKey();
     
     // --- 產生「日期_店家_品名_顏色」的唯一 ID ---
     const todayStr = new Date().toISOString().split('T')[0]; 
@@ -2450,7 +2588,8 @@ function updateQtyFromGrid(prod, color, value) {
             qty,
             isReturn: false,
             note: existingNote,
-            timestamp: new Date().toLocaleString("zh-TW", {timeZone: "Asia/Taipei"})
+            timestamp: new Date().toLocaleString("zh-TW", {timeZone: "Asia/Taipei"}),
+            ...(createdDateKey ? { createdDateKey } : {})
         });
     }
     saveAll();
@@ -2467,7 +2606,9 @@ function updateNoteFromGrid(prod, noteValue) {
         if (cleanNote) {
             records.push({
                 id: crypto.randomUUID(), shop: shopName, name: `[紫] ${prod}`,
-                baseName: prod, color: '紫', qty: 0, isReturn: false, note: cleanNote
+                baseName: prod, color: '紫', qty: 0, isReturn: false, note: cleanNote,
+                timestamp: new Date().toLocaleString("zh-TW", {timeZone: "Asia/Taipei"}),
+                createdDateKey: getTaipeiDateKey()
             });
         }
     } else {
@@ -2485,25 +2626,13 @@ function getPackingItemKey(shop, product, color) {
     return JSON.stringify([shop, product, color]);
 }
 
-function renderPackingList() {
-    const container = document.getElementById('packingList');
-    const shopFilter = document.getElementById('packingShopFilter');
-    if (!container || !shopFilter) return;
-
+function getPackingChecklistState() {
     const activeRecords = records.filter(record => Number(record.qty) > 0 || String(record.note || '').trim());
-    if (activeRecords.length === 0) {
-        packingSelectedShop = '';
-        shopFilter.innerHTML = '<div class="empty-text">目前沒有店家備貨資料</div>';
-        container.innerHTML = '<div class="empty-text">目前沒有店家打包資料</div>';
-        return;
-    }
-
     const shopNamesWithData = new Set(activeRecords.map(record => record.shop).filter(Boolean));
     const shops = [
         ...baseShops.filter(shop => shopNamesWithData.has(shop)),
         ...[...shopNamesWithData].filter(shop => !baseShops.includes(shop))
     ];
-
     const itemKeysByShop = new Map();
     activeRecords.forEach(record => {
         const quantity = Number(record.qty) || 0;
@@ -2517,6 +2646,26 @@ function renderPackingList() {
         const itemKeys = itemKeysByShop.get(shop);
         return itemKeys?.size > 0 && [...itemKeys].every(itemKey => packingCheckedItems.has(itemKey));
     }));
+    const unfinishedShops = shops.filter(shop => {
+        const itemKeys = itemKeysByShop.get(shop);
+        return itemKeys?.size > 0 && [...itemKeys].some(itemKey => !packingCheckedItems.has(itemKey));
+    });
+    return { activeRecords, shops, itemKeysByShop, completedShops, unfinishedShops };
+}
+
+function renderPackingList() {
+    const container = document.getElementById('packingList');
+    const shopFilter = document.getElementById('packingShopFilter');
+    if (!container || !shopFilter) return;
+
+    const { activeRecords, shops, itemKeysByShop, completedShops } = getPackingChecklistState();
+    if (activeRecords.length === 0) {
+        packingSelectedShop = '';
+        shopFilter.innerHTML = '<div class="empty-text">目前沒有店家備貨資料</div>';
+        container.innerHTML = '<div class="empty-text">目前沒有店家打包資料</div>';
+        return;
+    }
+
     const originalShopOrder = new Map(shops.map((shop, index) => [shop, index]));
     shops.sort((first, second) =>
         Number(completedShops.has(first)) - Number(completedShops.has(second))
