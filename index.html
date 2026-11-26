@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>竣泰智慧備貨與備貨系統 v3.1.5</title>
+    <title>竣泰智慧備貨與備貨系統 v3.1.6</title>
     <style>
         :root {
             --primary: #E91E63;
@@ -1110,6 +1110,7 @@
       }
 
       const saveDateKey = getLocalDateKey();
+      const saveDateStr = saveDateKey.replace(/-/g, '/');
 
       const chunkSize = 400;
       for (let i = 0; i < validRecords.length; i += chunkSize) {
@@ -1137,7 +1138,7 @@
         });
         await batch.commit();
       }
-      return { status: "SUCCESS", message: `今日抄貨 (${dateStr}) 已成功儲存至 Firebase！` };
+      return { status: "SUCCESS", message: `今日抄貨 (${saveDateStr}) 已成功儲存至 Firebase！` };
     },
 
     // 4. 儲存後台設定
